@@ -128,7 +128,7 @@ export const homeFaqs = [
   },
   {
     q: "Who built this?",
-    a: "Jaan Mustafa, an engineer currently working at ClearTax. Built because he was tired of losing track of his own job applications during a switch and couldn't find a tool that wasn't either bloated CRM software or a $20/month SaaS."
+    a: "Shubham, an engineer currently working at ClearTax. Built because he was tired of losing track of his own job applications during a switch and couldn't find a tool that wasn't either bloated CRM software or a $20/month SaaS."
   }
 ];
 
