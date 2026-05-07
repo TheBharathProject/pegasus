@@ -1,0 +1,329 @@
+"use client";
+
+import Link from "next/link";
+import { ReactNode, useEffect, useState } from "react";
+import {
+  ArrowUpRightIcon,
+  BriefcaseIcon,
+  ChatIcon,
+  ChevronLeft,
+  ChevronRight,
+  CloseIcon,
+  ContactIcon,
+  DashboardIcon,
+  FileIcon,
+  FolderIcon,
+  HelpIcon,
+  MenuIcon,
+  NotebookIcon,
+  SettingsIcon,
+  UserIcon,
+  UserPlusIcon
+} from "./icons";
+
+type MarketingFrameProps = {
+  children: ReactNode;
+  current?: "home" | "blog" | "community" | "privacy" | "terms";
+};
+
+type ProductNavKey =
+  | "dashboard"
+  | "applications"
+  | "notes"
+  | "profile"
+  | "resume"
+  | "resumes"
+  | "settings"
+  | "community";
+
+type ProductFrameProps = {
+  children: ReactNode;
+  active: ProductNavKey;
+  title?: string;
+  intro?: string;
+  kicker?: ReactNode;
+  actions?: ReactNode;
+  currentPath?: string;
+  noPadding?: boolean;
+};
+
+const marketingLinks = [
+  { href: "/blog", label: "Blog", key: "blog" as const },
+  { href: "/community", label: "Community", key: "community" as const }
+];
+
+type IconCmp = (props: { width?: number; height?: number; className?: string }) => JSX.Element;
+
+type NavLink = {
+  href: string;
+  label: string;
+  key: ProductNavKey;
+  Icon: IconCmp;
+};
+
+const productNavGroups: Array<{ label?: string; links: NavLink[] }> = [
+  {
+    links: [
+      { href: "/dashboard", label: "Dashboard", key: "dashboard", Icon: DashboardIcon },
+      { href: "/applications", label: "Applications", key: "applications", Icon: BriefcaseIcon },
+      { href: "/notes", label: "Notes", key: "notes", Icon: NotebookIcon }
+    ]
+  },
+  {
+    label: "You",
+    links: [
+      { href: "/profile", label: "Profile", key: "profile", Icon: UserIcon },
+      { href: "/resume", label: "Resume AI", key: "resume", Icon: FileIcon },
+      { href: "/resumes", label: "Vault", key: "resumes", Icon: FolderIcon },
+      { href: "/settings", label: "Settings", key: "settings", Icon: SettingsIcon }
+    ]
+  },
+  {
+    label: "Community",
+    links: [
+      { href: "/community/reviews", label: "Reviews", key: "community", Icon: ChatIcon },
+      { href: "/community/experiences", label: "Experiences", key: "community", Icon: BriefcaseIcon },
+      { href: "/community/referrals", label: "Referrals", key: "community", Icon: UserPlusIcon },
+      { href: "/community/ask", label: "Ask", key: "community", Icon: HelpIcon },
+      { href: "/community/recruiters", label: "Recruiters", key: "community", Icon: ContactIcon }
+    ]
+  }
+];
+
+const SIDEBAR_KEY = "nc.sidebar-collapsed";
+
+function readSidebarState(): "collapsed" | "expanded" {
+  if (typeof document === "undefined") return "collapsed";
+  return (document.documentElement.dataset.sb as "collapsed" | "expanded") || "collapsed";
+}
+
+function useSidebarState(): [boolean, () => void] {
+  const [collapsed, setCollapsed] = useState(true);
+
+  useEffect(() => {
+    setCollapsed(readSidebarState() === "collapsed");
+    const onChange = () => setCollapsed(readSidebarState() === "collapsed");
+    window.addEventListener("nc:sidebar-changed", onChange);
+    return () => window.removeEventListener("nc:sidebar-changed", onChange);
+  }, []);
+
+  const toggle = () => {
+    if (typeof document === "undefined") return;
+    const html = document.documentElement;
+    const next = html.dataset.sb === "expanded" ? "collapsed" : "expanded";
+    html.dataset.sb = next;
+    try {
+      window.localStorage.setItem(SIDEBAR_KEY, next === "collapsed" ? "1" : "0");
+    } catch {}
+    window.dispatchEvent(new Event("nc:sidebar-changed"));
+  };
+
+  return [collapsed, toggle];
+}
+
+export function MarketingFrame({ children, current = "home" }: MarketingFrameProps) {
+  return (
+    <div className="marketing-frame">
+      <header className="topbar shell">
+        <Link className="brand" href="/">
+          <span className="brand-badge">NC</span>
+          <span>Naukri Clear</span>
+        </Link>
+        <nav className="topnav">
+          {marketingLinks.map((link) => (
+            <Link
+              className={current === link.key ? "topnav-link active" : "topnav-link"}
+              href={link.href}
+              key={link.href}
+            >
+              {link.label}
+            </Link>
+          ))}
+          <Link className="ghost-button" href="/login">
+            Sign in
+          </Link>
+        </nav>
+      </header>
+      {children}
+      <footer className="footer shell">
+        <div>
+          <div className="footer-title">Naukri Clear</div>
+          <p className="muted">
+            Job tracking, public profiles, community advice, and a browser clipper in one calm
+            surface.
+          </p>
+        </div>
+        <nav className="footer-nav">
+          <Link href="/">Home</Link>
+          <Link href="/blog">Blog</Link>
+          <Link href="/community">Community</Link>
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
+        </nav>
+      </footer>
+    </div>
+  );
+}
+
+export function ProductFrame({
+  children,
+  active,
+  title,
+  intro,
+  kicker,
+  actions,
+  currentPath,
+  noPadding
+}: ProductFrameProps) {
+  const [, toggle] = useSidebarState();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const showHeader = Boolean(title || intro || kicker || actions);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDrawerOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [drawerOpen]);
+
+  return (
+    <div className={drawerOpen ? "product-frame is-drawer-open" : "product-frame"}>
+      <button
+        className="mobile-menu-toggle"
+        aria-label="Open menu"
+        onClick={() => setDrawerOpen(true)}
+        type="button"
+      >
+        <MenuIcon width={18} height={18} />
+      </button>
+
+      <button
+        className="mobile-menu-backdrop"
+        aria-label="Close menu"
+        onClick={() => setDrawerOpen(false)}
+        type="button"
+        tabIndex={drawerOpen ? 0 : -1}
+      />
+
+      <button
+        className="collapse-button"
+        aria-label="Toggle sidebar"
+        onClick={toggle}
+        type="button"
+      >
+        <span className="collapse-when-collapsed" aria-hidden="true">
+          <ChevronRight width={12} height={12} />
+        </span>
+        <span className="collapse-when-expanded" aria-hidden="true">
+          <ChevronLeft width={12} height={12} />
+        </span>
+      </button>
+      <aside className="sidebar">
+        <button
+          className="mobile-drawer-close"
+          aria-label="Close menu"
+          onClick={() => setDrawerOpen(false)}
+          type="button"
+        >
+          <CloseIcon width={16} height={16} />
+        </button>
+        <Link
+          className="brand brand-sidebar"
+          href="/dashboard"
+          aria-label="Naukri Clear"
+          onClick={() => setDrawerOpen(false)}
+        >
+          <span className="brand-badge">NC</span>
+          <span className="brand-text">Naukri Clear</span>
+        </Link>
+        <nav className="sidebar-nav">
+          {productNavGroups.map((group, index) => (
+            <div className="nav-group" key={group.label ?? `root-${index}`}>
+              {group.label ? <div className="nav-group-label">{group.label}</div> : null}
+              {group.links.map((link) => {
+                const Icon = link.Icon;
+                return (
+                  <Link
+                    className={
+                      active === link.key && (!currentPath || currentPath === link.href)
+                        ? "sidebar-link active"
+                        : "sidebar-link"
+                    }
+                    href={link.href}
+                    key={link.href}
+                    aria-label={link.label}
+                    title={link.label}
+                    onClick={() => setDrawerOpen(false)}
+                  >
+                    <span className="nav-icon" aria-hidden="true">
+                      <Icon />
+                    </span>
+                    <span className="nav-label">{link.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+        <div className="sidebar-spacer" />
+        <div className="sidebar-user" aria-label="Account">
+          <span className="avatar-dot" />
+          <div className="sidebar-user-copy">
+            <strong>Shubham Dixit</strong>
+            <span>dixit.shubh18@gmail.com</span>
+          </div>
+          <span className="signout-icon" aria-hidden="true">
+            <ArrowUpRightIcon width={14} height={14} />
+          </span>
+        </div>
+      </aside>
+      <main className={noPadding ? "product-main is-flush" : "product-main"}>
+        {showHeader ? (
+          <header className="product-header">
+            <div>
+              {kicker
+                ? typeof kicker === "string"
+                  ? <p className="eyebrow">{kicker}</p>
+                  : kicker
+                : null}
+              {title ? <h1>{title}</h1> : null}
+              {intro ? <p className="muted">{intro}</p> : null}
+            </div>
+            {actions ? <div className="header-actions">{actions}</div> : null}
+          </header>
+        ) : null}
+        {children}
+      </main>
+    </div>
+  );
+}
+
+export function CommunityTabs({ current }: { current: string }) {
+  const tabs = [
+    { href: "/community/reviews", label: "Reviews" },
+    { href: "/community/experiences", label: "Experiences" },
+    { href: "/community/referrals", label: "Referrals" },
+    { href: "/community/ask", label: "Ask" },
+    { href: "/community/recruiters", label: "Recruiters" }
+  ];
+
+  return (
+    <nav className="community-tabs">
+      {tabs.map((tab) => (
+        <Link
+          className={current === tab.href ? "community-tab active" : "community-tab"}
+          href={tab.href}
+          key={tab.href}
+        >
+          {tab.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}

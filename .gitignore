@@ -1,0 +1,44 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# misc
+.DS_Store
+*.pem
+
+# debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# local env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# vscode
+.vscode/
+
+# Licensed fonts — uncomment if this repo is or may become public.
+# Lyon Display is licensed from Commercial Type and must not be
+# redistributed publicly. Keep the WOFF2 files out of public history.
+# /public/fonts/LyonDisplay-Regular/
+# /public/fonts/LyonDisplay-RegularItalic/
+
+# Per session 2026-05-07: extra exclusions before first commit
+.env.production
+.claude/settings.local.json
+
+# Licensed fonts — Lyon Display from Commercial Type. Never in git history,
+# even while this repo is private, because history persists when we flip
+# the repo public on deploy.
+/public/fonts/LyonDisplay-Regular/
+/public/fonts/LyonDisplay-RegularItalic/
