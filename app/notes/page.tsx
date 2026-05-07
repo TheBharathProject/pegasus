@@ -18,8 +18,9 @@ import {
   UndoIcon
 } from "@/components/icons";
 import { renderMarkdown } from "@/lib/markdown";
-import { api, ApiError, type ApiCategory, type ApiNote } from "@/lib/api-client";
+import { api, ApiError, type ApiCategory, type ApiNote, type ApiNoteListItem } from "@/lib/api-client";
 import { isAuthed } from "@/lib/auth";
+import { goTo } from "@/lib/paths";
 
 type ViewMode = "edit" | "split" | "preview";
 type History = { past: string[]; future: string[]; lastPushAt: number };
@@ -114,7 +115,7 @@ function fmtRelative(iso: string) {
 }
 
 export default function NotesPage() {
-  const [notes, setNotes] = useState<ApiNote[]>([]);
+  const [notes, setNotes] = useState<ApiNoteListItem[]>([]);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
@@ -149,7 +150,7 @@ export default function NotesPage() {
   const refresh = async () => {
     try {
       const [n, c] = await Promise.all([
-        api.get<ApiNote[]>("/job-tracker/notes"),
+        api.get<ApiNoteListItem[]>("/job-tracker/notes"),
         api.get<ApiCategory[]>("/job-tracker/notes/categories")
       ]);
       setNotes(n);
@@ -161,7 +162,7 @@ export default function NotesPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && !isAuthed()) {
-      window.location.href = "/login";
+      goTo("/login");
       return;
     }
     refresh().then(reconcilePending);
@@ -190,7 +191,7 @@ export default function NotesPage() {
           // Our edits are based on the latest server state — safe to push.
           await api.put(`/job-tracker/notes/${noteId}`, {
             title: draft.title,
-            body: draft.body,
+            content: draft.body,
             pinned: server.pinned,
             categoryId: draft.categoryId ?? undefined
           });
@@ -203,7 +204,7 @@ export default function NotesPage() {
         const sameDevice = draft.deviceId === myDevice;
         const contentMatches =
           server.title === draft.title &&
-          server.body === draft.body &&
+          server.content === draft.body &&
           (server.categoryId ?? null) === (draft.categoryId ?? null);
         if (sameDevice && contentMatches) {
           clearPending(noteId);
@@ -231,14 +232,14 @@ export default function NotesPage() {
       setConflicts((prev) => [...prev, ...newConflicts]);
     }
     // Pull a fresh list now that any safe drafts have been flushed.
-    api.get<ApiNote[]>("/job-tracker/notes").then(setNotes).catch(() => {});
+    api.get<ApiNoteListItem[]>("/job-tracker/notes").then(setNotes).catch(() => {});
   };
 
   const resolveKeepMine = async (c: ConflictEntry) => {
     try {
       const updated = await api.put<ApiNote>(`/job-tracker/notes/${c.noteId}`, {
         title: c.local.title,
-        body: c.local.body,
+        content: c.local.body,
         pinned: c.server.pinned,
         categoryId: c.local.categoryId ?? undefined
       });
@@ -247,7 +248,7 @@ export default function NotesPage() {
         baseUpdatedAtRef.current[c.noteId] = updated.updatedAt;
       }
       setConflicts((cs) => cs.filter((x) => x.noteId !== c.noteId));
-      api.get<ApiNote[]>("/job-tracker/notes").then(setNotes).catch(() => {});
+      api.get<ApiNoteListItem[]>("/job-tracker/notes").then(setNotes).catch(() => {});
     } catch (e) {
       window.alert(`Could not save: ${(e as Error).message}`);
     }
@@ -260,12 +261,12 @@ export default function NotesPage() {
       ...d,
       [c.noteId]: {
         title: c.server.title,
-        body: c.server.body,
+        body: c.server.content,
         categoryId: c.server.categoryId ?? null
       }
     }));
     setConflicts((cs) => cs.filter((x) => x.noteId !== c.noteId));
-    api.get<ApiNote[]>("/job-tracker/notes").then(setNotes).catch(() => {});
+    api.get<ApiNoteListItem[]>("/job-tracker/notes").then(setNotes).catch(() => {});
   };
 
   const filteredNotes = useMemo(() => {
@@ -280,7 +281,7 @@ export default function NotesPage() {
       list = list.filter(
         (n) =>
           (n.title || "").toLowerCase().includes(q) ||
-          (n.body || "").toLowerCase().includes(q)
+          (n.excerpt || "").toLowerCase().includes(q)
       );
     }
     return [...list].sort((a, b) => {
@@ -296,8 +297,8 @@ export default function NotesPage() {
 
   // Seed the draft when the active note first loads. If a pending draft
   // exists in localStorage for this note we restore it (so the user picks
-  // up exactly where they left off after a tab close). Otherwise we use
-  // the server's content.
+  // up exactly where they left off after a tab close). Otherwise we fetch
+  // the full note from the server — the list endpoint only ships excerpts.
   useEffect(() => {
     if (!activeNote) return;
     // Capture the base server timestamp once per note open. Subsequent
@@ -306,34 +307,51 @@ export default function NotesPage() {
     if (!baseUpdatedAtRef.current[activeNote.id]) {
       baseUpdatedAtRef.current[activeNote.id] = activeNote.updatedAt;
     }
-    setDrafts((prev) => {
-      if (prev[activeNote.id]) return prev;
-      const pending = loadPending()[activeNote.id];
-      if (pending) {
-        return {
-          ...prev,
-          [activeNote.id]: {
-            title: pending.title,
-            body: pending.body,
-            categoryId: pending.categoryId
-          }
-        };
-      }
-      return {
+    if (drafts[activeNote.id]) return; // already loaded
+    const pending = loadPending()[activeNote.id];
+    if (pending) {
+      setDrafts((prev) => ({
         ...prev,
         [activeNote.id]: {
-          title: activeNote.title,
-          body: activeNote.body,
-          categoryId: activeNote.categoryId ?? null
+          title: pending.title,
+          body: pending.body,
+          categoryId: pending.categoryId
         }
-      };
-    });
+      }));
+      return;
+    }
+    // Fetch full content for the active note.
+    const noteId = activeNote.id;
+    api
+      .get<ApiNote>(`/job-tracker/notes/${noteId}`)
+      .then((full) => {
+        baseUpdatedAtRef.current[noteId] = full.updatedAt;
+        setDrafts((prev) =>
+          prev[noteId]
+            ? prev
+            : {
+                ...prev,
+                [noteId]: {
+                  title: full.title,
+                  body: full.content,
+                  categoryId: full.categoryId ?? null
+                }
+              }
+        );
+      })
+      .catch((e: Error) => {
+        if (e instanceof ApiError && e.status === 404) {
+          setActiveNoteId(null);
+        } else {
+          setError(e.message);
+        }
+      });
   }, [activeNoteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const draft: Draft | null = activeNote
     ? drafts[activeNote.id] ?? {
         title: activeNote.title,
-        body: activeNote.body,
+        body: "",
         categoryId: activeNote.categoryId ?? null
       }
     : null;
@@ -385,7 +403,7 @@ export default function NotesPage() {
     try {
       const updated = await api.put<ApiNote>(`/job-tracker/notes/${noteId}`, {
         title: draft.title,
-        body: draft.body,
+        content: draft.body,
         pinned: notes.find((n) => n.id === noteId)?.pinned ?? false,
         categoryId: draft.categoryId ?? undefined
       });
@@ -401,7 +419,7 @@ export default function NotesPage() {
       }
       setSaveStatus("saved");
       setSavedAt(new Date().toISOString());
-      api.get<ApiNote[]>("/job-tracker/notes").then(setNotes).catch(() => {});
+      api.get<ApiNoteListItem[]>("/job-tracker/notes").then(setNotes).catch(() => {});
     } catch (e) {
       setError((e as Error).message);
       setSaveStatus("error");
@@ -482,7 +500,7 @@ export default function NotesPage() {
     const h = getHistory(activeNote.id);
     if (h.past.length === 0) return;
     const prev = h.past.pop()!;
-    h.future.push(drafts[activeNote.id]?.body ?? activeNote.body);
+    h.future.push(drafts[activeNote.id]?.body ?? "");
     h.lastPushAt = 0;
     updateDraft(activeNote.id, { body: prev });
     bumpHistory((v) => v + 1);
@@ -494,7 +512,7 @@ export default function NotesPage() {
     const h = getHistory(activeNote.id);
     if (h.future.length === 0) return;
     const next = h.future.pop()!;
-    h.past.push(drafts[activeNote.id]?.body ?? activeNote.body);
+    h.past.push(drafts[activeNote.id]?.body ?? "");
     h.lastPushAt = 0;
     updateDraft(activeNote.id, { body: next });
     bumpHistory((v) => v + 1);
@@ -589,7 +607,7 @@ export default function NotesPage() {
     try {
       const created = await api.post<ApiNote>("/job-tracker/notes", {
         title: "",
-        body: "",
+        content: "",
         pinned: false,
         categoryId: activeCategoryId === "all" ? undefined : activeCategoryId
       });
@@ -606,7 +624,7 @@ export default function NotesPage() {
     try {
       await api.put(`/job-tracker/notes/${activeNote.id}`, {
         title: draft.title,
-        body: draft.body,
+        content: draft.body,
         pinned: !activeNote.pinned,
         categoryId: draft.categoryId ?? undefined
       });

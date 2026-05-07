@@ -1,6 +1,7 @@
 // Single fetch wrapper for sypher-api. Attaches Authorization header from
 // localStorage, normalises errors, throws on non-2xx.
 import { getToken, clearToken } from "./auth";
+import { withBase } from "./paths";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
@@ -46,6 +47,16 @@ async function request<T = unknown>(path: string, init: RequestInitWithBody = {}
 
   if (res.status === 401) {
     clearToken();
+    // For authenticated requests, bounce the user to /login. Public
+    // requests (skipAuth) stay silent — they may legitimately 401 (e.g.
+    // a misconfigured public profile) without warranting a redirect.
+    if (!init.skipAuth && typeof window !== "undefined") {
+      const loginPath = withBase("/login");
+      const onLogin = window.location.pathname.startsWith(loginPath);
+      if (!onLogin) {
+        window.location.href = `${loginPath}?expired=1`;
+      }
+    }
   }
 
   if (init.rawResponse) {
@@ -94,6 +105,12 @@ export type ApiUser = {
   timezone: string;
 };
 
+export type ApiStageChange = {
+  from?: string;        // empty/missing on the initial "added" entry
+  to: string;
+  changedAt: string;    // RFC3339
+};
+
 export type ApiApplication = {
   id: string;
   company: string;
@@ -105,9 +122,10 @@ export type ApiApplication = {
   appliedAt?: string;
   applyDeadline?: string;
   jobLink?: string;
-  description?: string;
+  jobDescription?: string;
   notes?: string;
   stale: boolean;
+  stageChangedAt?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -122,11 +140,23 @@ export type ApiDashboard = {
   conversionRate: number;
 };
 
+// Full note record — returned by GET /notes/{id}, POST /notes, PUT /notes/{id}.
 export type ApiNote = {
   id: string;
   categoryId?: string;
   title: string;
-  body: string;
+  content: string;
+  pinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// Slim list shape — returned by GET /notes (no full content, just an excerpt).
+export type ApiNoteListItem = {
+  id: string;
+  categoryId?: string;
+  title: string;
+  excerpt: string;
   pinned: boolean;
   createdAt: string;
   updatedAt: string;
@@ -142,30 +172,40 @@ export type ApiExperience = {
   id: string;
   company: string;
   title: string;
-  period?: string;
-  summary?: string;
-  ordinal: number;
+  location?: string;
+  startDate?: string; // YYYY-MM-DD
+  endDate?: string;
+  current: boolean;
+  description?: string;
+  sortOrder: number;
 };
 
 export type ApiEducation = {
   id: string;
   school: string;
   degree?: string;
-  period?: string;
-  ordinal: number;
+  field?: string;
+  startDate?: string;
+  endDate?: string;
+  gpa?: string;
+  description?: string;
+  sortOrder: number;
 };
 
 export type ApiProject = {
   id: string;
   name: string;
-  summary?: string;
-  ordinal: number;
+  description?: string;
+  techStack?: string;
+  link?: string;
+  sortOrder: number;
 };
 
 export type ApiSkill = {
   id: string;
   name: string;
   category?: string;
+  sortOrder: number;
 };
 
 export type ApiProfile = {
@@ -174,6 +214,9 @@ export type ApiProfile = {
   headline?: string;
   about?: string;
   location?: string;
+  linkedinUrl?: string;
+  githubUrl?: string;
+  websiteUrl?: string;
   experiences: ApiExperience[];
   educations: ApiEducation[];
   projects: ApiProject[];
@@ -183,11 +226,39 @@ export type ApiProfile = {
 export type ApiPublicProfile = {
   slug: string;
   name: string;
+  pictureUrl?: string;
   headline?: string;
-  location?: string;
   about?: string;
-  skills: string[];
+  location?: string;
+  linkedinUrl?: string;
+  githubUrl?: string;
+  websiteUrl?: string;
   experiences: ApiExperience[];
   educations: ApiEducation[];
   projects: ApiProject[];
+  skills: ApiSkill[];
+};
+
+export type ApiFile = {
+  id: string;
+  kind: "resume" | "cover_letter";
+  slot?: number;
+  label?: string;
+  fileName: string;
+  fileSize: number;
+  mimeType?: string;
+  uploadedAt?: string;
+  createdAt: string;
+};
+
+export type ApiResumesResponse = {
+  resumes: ApiFile[];
+  count: number;
+  limit: number;
+};
+
+export type ApiCoverLettersResponse = {
+  coverLetters: ApiFile[];
+  count: number;
+  limit: number;
 };

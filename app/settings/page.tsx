@@ -12,6 +12,7 @@ import {
 } from "@/components/icons";
 import { api, type ApiUser, type ApiProfile } from "@/lib/api-client";
 import { isAuthed, clearToken } from "@/lib/auth";
+import { goTo } from "@/lib/paths";
 
 const THEMES = [
   { key: "system", label: "System", caption: "Follows your OS", Icon: MonitorIcon },
@@ -39,7 +40,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && !isAuthed()) {
-      window.location.href = "/login";
+      goTo("/login");
       return;
     }
     Promise.all([
@@ -95,7 +96,7 @@ export default function SettingsPage() {
     const next = !e.target.checked; // checkbox is "Hide"; public = !checked
     try {
       const updated = await api.patch<ApiProfile>("/job-tracker/profile/visibility", {
-        public: next
+        isPublic: next
       });
       setProfile(updated);
     } catch (err) {
@@ -122,6 +123,7 @@ export default function SettingsPage() {
       await api.post("/auth/logout");
     } catch {}
     clearToken();
+    // Land on the sypher.in apex (escapes basePath /pegasus on purpose).
     window.location.href = "/";
   };
 
@@ -262,14 +264,6 @@ export default function SettingsPage() {
             <button className="primary-button" type="button" onClick={handleGenerateToken}>
               Generate Extension Token
             </button>
-            <a
-              className="ghost-button"
-              href="https://github.com/naukriclear/extension"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Install it from GitHub
-            </a>
           </div>
           {token ? (
             <div className="billing-row" style={{ marginTop: 16 }}>

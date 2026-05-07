@@ -3,8 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProductFrame } from "@/components/frames";
 import { MetricCard, Pill } from "@/components/ui";
-import { api, apiBaseUrl, type ApiApplication } from "@/lib/api-client";
+import {
+  api,
+  apiBaseUrl,
+  type ApiApplication,
+  type ApiStageChange
+} from "@/lib/api-client";
 import { getToken, isAuthed } from "@/lib/auth";
+import { goTo } from "@/lib/paths";
 import {
   BoardIcon,
   CloseIcon,
@@ -53,7 +59,7 @@ const EMPTY_DRAFT = {
   location: "",
   salaryRange: "",
   jobLink: "",
-  description: "",
+  jobDescription: "",
   notes: "",
   stale: false
 };
@@ -88,6 +94,8 @@ export default function ApplicationsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
+  const [timeline, setTimeline] = useState<ApiStageChange[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
   const [showTip, setShowTip] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const tweakFileRef = useRef<HTMLInputElement | null>(null);
@@ -126,7 +134,7 @@ export default function ApplicationsPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && !isAuthed()) {
-      window.location.href = "/login";
+      goTo("/login");
       return;
     }
     refresh();
@@ -158,7 +166,7 @@ export default function ApplicationsPage() {
       location: a.location ?? "",
       salaryRange: a.salaryRange ?? "",
       jobLink: a.jobLink ?? "",
-      description: a.description ?? "",
+      jobDescription: a.jobDescription ?? "",
       notes: a.notes ?? "",
       stale: a.stale ?? false
     });
@@ -169,6 +177,44 @@ export default function ApplicationsPage() {
     setShowModal(false);
     setEditingId(null);
     setDraft(EMPTY_DRAFT);
+  };
+
+  // Drag-and-drop on the board: when a card is dropped on a different
+  // column we PUT the application with the new stage. Optimistic UI:
+  // patch local items first so the card jumps immediately, then refresh
+  // from the server to pick up stage_changed_at + history.
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [hoverStage, setHoverStage] = useState<string | null>(null);
+
+  const moveAppToStage = async (appId: string, nextStage: string) => {
+    const current = items.find((a) => a.id === appId);
+    if (!current || current.stage === nextStage) return;
+    setItems((prev) =>
+      prev.map((a) => (a.id === appId ? { ...a, stage: nextStage } : a))
+    );
+    try {
+      await api.put(`/job-tracker/applications/${appId}`, {
+        company: current.company,
+        role: current.role,
+        source: current.source ?? "",
+        location: current.location ?? "",
+        salaryRange: current.salaryRange ?? "",
+        stage: nextStage,
+        appliedAt: current.appliedAt ?? "",
+        applyDeadline: current.applyDeadline ?? "",
+        jobLink: current.jobLink ?? "",
+        jobDescription: current.jobDescription ?? "",
+        notes: current.notes ?? "",
+        stale: current.stale
+      });
+      await refresh();
+    } catch (e) {
+      // Roll back on failure.
+      setItems((prev) =>
+        prev.map((a) => (a.id === appId ? { ...a, stage: current.stage } : a))
+      );
+      window.alert(`Could not move card: ${(e as Error).message}`);
+    }
   };
 
   const handleSave = async () => {
@@ -186,8 +232,20 @@ export default function ApplicationsPage() {
     }
   };
 
-  const openView = (a: ApiApplication) => setViewingId(a.id);
-  const closeView = () => setViewingId(null);
+  const openView = (a: ApiApplication) => {
+    setViewingId(a.id);
+    setTimeline([]);
+    setTimelineLoading(true);
+    api
+      .get<ApiStageChange[]>(`/job-tracker/applications/${a.id}/timeline`)
+      .then((rows) => setTimeline(rows ?? []))
+      .catch(() => setTimeline([]))
+      .finally(() => setTimelineLoading(false));
+  };
+  const closeView = () => {
+    setViewingId(null);
+    setTimeline([]);
+  };
 
   const editFromView = () => {
     const a = viewingApp;
@@ -210,14 +268,14 @@ export default function ApplicationsPage() {
 
   const openCoverDialog = () => {
     if (!viewingApp) return;
-    setCoverJD(viewingApp.description ?? "");
+    setCoverJD(viewingApp.jobDescription ?? "");
     setAiError(null);
     setShowCoverDialog(true);
   };
 
   const openTweakDialog = () => {
     if (!viewingApp) return;
-    setTweakJD(viewingApp.description ?? "");
+    setTweakJD(viewingApp.jobDescription ?? "");
     setTweakFile(null);
     setTweakResumeId(null);
     setAiError(null);
@@ -484,8 +542,31 @@ export default function ApplicationsPage() {
         <section className="board-grid" aria-label="Applications board">
           {STAGES.map((stage) => {
             const cards = items.filter((a) => a.stage === stage);
+            const isHover = hoverStage === stage && dragId !== null;
             return (
-              <article className="kanban-column" key={stage}>
+              <article
+                className={isHover ? "kanban-column is-drop-target" : "kanban-column"}
+                key={stage}
+                onDragOver={(e) => {
+                  if (!dragId) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (hoverStage !== stage) setHoverStage(stage);
+                }}
+                onDragLeave={(e) => {
+                  // Only clear if we've actually left the column, not just
+                  // moved over a child card.
+                  if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+                  if (hoverStage === stage) setHoverStage(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const id = e.dataTransfer.getData("application/x-app-id") || dragId;
+                  setHoverStage(null);
+                  setDragId(null);
+                  if (id) void moveAppToStage(id, stage);
+                }}
+              >
                 <header>
                   <span>
                     <span
@@ -510,10 +591,20 @@ export default function ApplicationsPage() {
                 ) : (
                   cards.map((c) => (
                     <div
-                      className="kanban-card"
+                      className={dragId === c.id ? "kanban-card is-dragging" : "kanban-card"}
                       key={c.id}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("application/x-app-id", c.id);
+                        e.dataTransfer.effectAllowed = "move";
+                        setDragId(c.id);
+                      }}
+                      onDragEnd={() => {
+                        setDragId(null);
+                        setHoverStage(null);
+                      }}
                       onClick={() => openView(c)}
-                      style={{ cursor: "pointer" }}
+                      style={{ cursor: dragId === c.id ? "grabbing" : "grab" }}
                     >
                       <strong>{c.company}</strong>
                       <p className="muted small" style={{ marginTop: 4 }}>
@@ -614,10 +705,10 @@ export default function ApplicationsPage() {
                     <span className="app-detail-value">{fmtRelative(viewingApp.updatedAt)}</span>
                   </div>
                 </div>
-                {viewingApp.description ? (
+                {viewingApp.jobDescription ? (
                   <div className="app-detail-block">
                     <p className="app-detail-label">Job description</p>
-                    <p className="app-detail-prose">{viewingApp.description}</p>
+                    <p className="app-detail-prose">{viewingApp.jobDescription}</p>
                   </div>
                 ) : null}
                 {viewingApp.notes ? (
@@ -661,28 +752,49 @@ export default function ApplicationsPage() {
 
                 <section className="app-detail-section">
                   <p className="eyebrow">Timeline</p>
-                  <ul className="app-timeline">
-                    <li>
-                      <span className="app-timeline-dot">
-                        <PlusIcon width={12} height={12} />
-                      </span>
-                      <div>
-                        <em>Application added.</em>
-                        <span className="muted small">{fmtRelative(viewingApp.createdAt)}</span>
-                      </div>
-                    </li>
-                    {viewingApp.updatedAt && viewingApp.updatedAt !== viewingApp.createdAt ? (
-                      <li>
-                        <span className="app-timeline-dot">
-                          <PencilIcon width={12} height={12} />
-                        </span>
-                        <div>
-                          <em>Last updated.</em>
-                          <span className="muted small">{fmtRelative(viewingApp.updatedAt)}</span>
-                        </div>
-                      </li>
-                    ) : null}
-                  </ul>
+                  {timelineLoading && timeline.length === 0 ? (
+                    <p className="muted small" style={{ marginTop: 10 }}>
+                      Loading…
+                    </p>
+                  ) : (
+                    <ul className="app-timeline">
+                      {timeline.map((entry, idx) => {
+                        const isInitial = !entry.from;
+                        return (
+                          <li key={`${entry.changedAt}-${idx}`}>
+                            <span className="app-timeline-dot">
+                              {isInitial ? (
+                                <PlusIcon width={12} height={12} />
+                              ) : (
+                                <PencilIcon width={12} height={12} />
+                              )}
+                            </span>
+                            <div>
+                              <em>
+                                {isInitial
+                                  ? "Application added."
+                                  : `Moved from ${STAGE_LABELS[entry.from!] ?? entry.from} to ${STAGE_LABELS[entry.to] ?? entry.to}.`}
+                              </em>
+                              <span className="muted small">{fmtRelative(entry.changedAt)}</span>
+                            </div>
+                          </li>
+                        );
+                      })}
+                      {timeline.length === 0 && !timelineLoading ? (
+                        <li>
+                          <span className="app-timeline-dot">
+                            <PlusIcon width={12} height={12} />
+                          </span>
+                          <div>
+                            <em>Application added.</em>
+                            <span className="muted small">
+                              {fmtRelative(viewingApp.createdAt)}
+                            </span>
+                          </div>
+                        </li>
+                      ) : null}
+                    </ul>
+                  )}
                 </section>
               </aside>
             </div>
@@ -773,8 +885,8 @@ export default function ApplicationsPage() {
                 <label>Job description</label>
                 <textarea
                   placeholder="Paste the JD here..."
-                  value={draft.description}
-                  onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                  value={draft.jobDescription}
+                  onChange={(e) => setDraft({ ...draft, jobDescription: e.target.value })}
                 />
               </div>
               <div className="field wide">

@@ -12,9 +12,61 @@ import {
   SparkleIcon
 } from "@/components/icons";
 import { homeFaqs, homeFeatures, homePersonas, homePreviewApplications } from "@/lib/site-data";
+import { useAuth, signOut } from "@/lib/auth";
 
 const FEATURE_ICONS = [BriefcaseIcon, ContactIcon, GaugeIcon, BellOffIcon, ShieldCheckIcon, SparkleIcon];
-const SIGN_IN_HREF = "/login";
+
+// Top-bar CTA toggles between "Sign in" and "Dashboard" + "Sign out" based
+// on auth state. Renders nothing during the brief useAuth load to avoid a
+// flash from one to the other on hydration.
+function TopNavCta() {
+  const { authed, loading } = useAuth();
+  if (loading) return null;
+  if (authed) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => {
+            void signOut("/");
+          }}
+          style={{
+            background: "transparent",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            color: "inherit",
+            font: "inherit"
+          }}
+        >
+          Sign out
+        </button>
+        <Link className="nc-topnav-signin" href="/dashboard">
+          Dashboard
+        </Link>
+      </>
+    );
+  }
+  return (
+    <Link className="nc-topnav-signin" href="/login">
+      Sign in
+    </Link>
+  );
+}
+
+// Wraps the hero / bottom CTAs that originally always linked to /login.
+// When the user is signed in, point at /dashboard so clicking the same
+// "Start tracking" button takes them where they're already going. The
+// label stays unchanged per the no-UI-changes rule.
+function PrimaryCta({ children, className }: { children: React.ReactNode; className: string }) {
+  const { authed } = useAuth();
+  const href = authed ? "/dashboard" : "/login";
+  return (
+    <Link className={className} href={href}>
+      {children}
+    </Link>
+  );
+}
 
 function DiscordIcon({ className }: { className?: string }) {
   return (
@@ -45,18 +97,17 @@ export default function HomePage() {
       <header className="nc-topnav">
         <div className="nc-topnav-inner">
           <Link className="nc-brand" href="/">
-            <span className="nc-brand-logo">NC</span>
-            <span className="nc-brand-text">Naukri Clear</span>
+            <span className="nc-brand-logo">P</span>
+            <span className="nc-brand-text">Pegasus</span>
             <span className="nc-brand-tag">Free job application tracker</span>
           </Link>
           <nav className="nc-topnav-links">
             <a href="#features">Features</a>
             <a href="#who-its-for">Who it&apos;s for</a>
             <a href="#faq">FAQ</a>
-            <Link href="/blog">Blog</Link>
-            <Link className="nc-topnav-signin" href={SIGN_IN_HREF}>
-              Sign in
-            </Link>
+            {/* Plain <a> escapes basePath /pegasus and lands on the apex blog. */}
+            <a href="/blog">Blog</a>
+            <TopNavCta />
           </nav>
         </div>
       </header>
@@ -69,14 +120,14 @@ export default function HomePage() {
           </div>
           <h1 className="nc-hero-title">A quieter way to track your job hunt.</h1>
           <p className="nc-hero-sub">
-            Stop juggling spreadsheets, sticky notes, and a hundred recruiter emails. Naukri Clear
+            Stop juggling spreadsheets, sticky notes, and a hundred recruiter emails. Pegasus
             keeps every application, every conversation, and every next step in one calm place —
             built for the way you actually job hunt.
           </p>
           <div className="nc-cta-row">
-            <Link className="nc-btn-primary" href={SIGN_IN_HREF}>
+            <PrimaryCta className="nc-btn-primary">
               Start tracking — it&apos;s free <ArrowRightIcon width={15} height={15} />
-            </Link>
+            </PrimaryCta>
             <a className="nc-btn-ghost" href="#features">
               See what&apos;s inside
             </a>
@@ -88,7 +139,7 @@ export default function HomePage() {
               <span className="nc-dot-r" />
               <span className="nc-dot-y" />
               <span className="nc-dot-g" />
-              <span className="nc-preview-url">naukriclear.com / dashboard</span>
+              <span className="nc-preview-url">pegasus.app / dashboard</span>
             </div>
             <div className="nc-preview-grid">
               <aside className="nc-preview-side">
@@ -197,9 +248,9 @@ export default function HomePage() {
             no commitment, no email spam.
           </p>
           <div className="nc-cta-row">
-            <Link className="nc-btn-primary" href={SIGN_IN_HREF}>
+            <PrimaryCta className="nc-btn-primary">
               Start tracking — it&apos;s free <ArrowRightIcon width={15} height={15} />
-            </Link>
+            </PrimaryCta>
             <a
               className="nc-btn-ghost"
               href="https://discord.gg/XBAYqhK9"
@@ -218,16 +269,17 @@ export default function HomePage() {
       <footer className="nc-footer">
         <div className="nc-footer-inner">
           <div className="nc-footer-brand">
-            <span className="nc-brand-logo small">NC</span>
-            <span>Naukri Clear · made by Jaan Mustafa</span>
+            <span className="nc-brand-logo small">P</span>
+            <span>Pegasus · by Shubham</span>
           </div>
           <nav className="nc-footer-nav">
             <a href="https://discord.gg/XBAYqhK9" target="_blank" rel="noreferrer">
               <DiscordIcon className="nc-footer-discord" /> Discord
             </a>
-            <Link href="/blog">Blog</Link>
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
+            {/* Plain <a> escapes basePath /pegasus → these resolve at the sypher.in apex. */}
+            <a href="/blog">Blog</a>
+            <a href="/privacy">Privacy</a>
+            <a href="/terms">Terms</a>
             <a href="mailto:hello@example.com">Contact</a>
           </nav>
         </div>

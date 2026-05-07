@@ -38,22 +38,6 @@ export type NotePreview = {
   updatedAt: string;
 };
 
-export type BlogSection = {
-  heading?: string;
-  paragraphs: string[];
-  bullets?: string[];
-};
-
-export type BlogPost = {
-  slug: string;
-  date: string;
-  readTime: string;
-  title: string;
-  excerpt: string;
-  tags: string[];
-  content: BlogSection[];
-};
-
 export type CommunityExperience = {
   id: number;
   slug: string;
@@ -67,30 +51,6 @@ export type CommunityExperience = {
   voteCount: number;
   commentCount: number;
   createdAt: string;
-};
-
-export type PublicProfile = {
-  slug: string;
-  name: string;
-  headline: string;
-  location: string;
-  about: string;
-  skills: string[];
-  experiences: Array<{
-    company: string;
-    title: string;
-    period: string;
-    summary: string;
-  }>;
-  educations: Array<{
-    school: string;
-    degree: string;
-    period: string;
-  }>;
-  projects: Array<{
-    name: string;
-    summary: string;
-  }>;
 };
 
 export const homePreviewApplications = [
@@ -147,15 +107,15 @@ export const homePersonas = [
 
 export const homeFaqs = [
   {
-    q: "Is Naukri Clear really free?",
+    q: "Is Pegasus really free?",
     a: "Yes, completely. There's no trial, no credit card, no premium tier hidden behind features. It's a personal project run by one person and offered for free to fellow job seekers."
   },
   {
     q: "How is this different from a spreadsheet?",
-    a: "You can do everything Naukri Clear does in a spreadsheet — if you have the patience to maintain one. We're built for people who don't. Pipeline views, recruiter contacts, notes, and dates are all wired together so you never have to re-enter the same thing twice."
+    a: "You can do everything Pegasus does in a spreadsheet — if you have the patience to maintain one. We're built for people who don't. Pipeline views, recruiter contacts, notes, and dates are all wired together so you never have to re-enter the same thing twice."
   },
   {
-    q: "Will Naukri Clear send emails for me?",
+    q: "Will Pegasus send emails for me?",
     a: "No. We don't read your inbox and we don't send mail on your behalf. Your Gmail stays untouched. The only thing we do with Google is sign you in."
   },
   {
@@ -216,7 +176,7 @@ export const personas = [
 
 export const faqs = [
   {
-    question: "Is Naukri Clear really free?",
+    question: "Is Pegasus really free?",
     answer: "The homepage positions the tracker as free for job seekers. The authenticated API also exposes pro billing and AI usage features."
   },
   {
@@ -395,7 +355,7 @@ export const settingsSnapshot = {
   plan: "pro",
   aiUsed: 2,
   aiLimit: 50,
-  extensionTokenPrefix: "nc_",
+  extensionTokenPrefix: "pg_",
   isCancelled: false
 };
 
@@ -443,142 +403,3 @@ export const askTags = [
   "remote-work"
 ];
 
-export const blogPosts: BlogPost[] = [
-  {
-    slug: "save-jobs-with-chrome-extension",
-    date: "20 April 2026",
-    readTime: "5 min read",
-    title: "Save Any Job in One Click: A Guide to the Naukri Clear Extension",
-    excerpt: "Install the browser extension once, clip from LinkedIn, Indeed, or Naukri in a few seconds, and push jobs straight into your tracker.",
-    tags: ["extension", "productivity", "guide"],
-    content: [
-      {
-        paragraphs: [
-          "The live product includes a browser clipper workflow: save the current job posting, prefill company, role, location, salary, and description, then drop it into your tracker in a chosen stage.",
-          "The extension stays pinned in a side panel, supports manual fallback for unsupported sites, stores drafts per URL, and detects duplicate saves."
-        ]
-      },
-      {
-        heading: "Observed extension flow",
-        paragraphs: [
-          "The article instructs users to sign in, load the unpacked extension from GitHub, generate an extension token from Settings, and connect with a token prefixed by nc_.",
-          "The side panel re-extracts data as you switch job tabs and persists partial state locally so you do not lose notes during context switches."
-        ],
-        bullets: [
-          "Supported auto-extraction targets: LinkedIn, Indeed, and Naukri",
-          "Manual fallback for other job sites with URL capture",
-          "Duplicate detection by job URL",
-          "Stage picker and freeform notes while clipping"
-        ]
-      }
-    ]
-  },
-  {
-    slug: "how-to-track-job-applications",
-    date: "18 April 2026",
-    readTime: "8 min read",
-    title: "How to Track Job Applications in 2026 (Without Losing Your Mind)",
-    excerpt: "A calmer operating system for a messy job hunt: track stages, save context, and make the inbox less foggy.",
-    tags: ["job search", "productivity", "guide"],
-    content: [
-      {
-        paragraphs: [
-          "The product positioning is consistent everywhere: a small operational layer for job hunting, not a sales CRM disguised for applicants.",
-          "Tracking works best when it covers dates, stages, recruiter context, document versions, and a visible next step."
-        ]
-      },
-      {
-        heading: "What the tracker is optimized for",
-        paragraphs: [
-          "The dashboard API exposes total applications, pipeline counts, interview totals, offer totals, weekly activity, response rate, and conversion rate.",
-          "That means the product is optimized for memory, prioritization, and trend visibility rather than gamified velocity."
-        ]
-      }
-    ]
-  },
-  {
-    slug: "resume-versions-strategy",
-    date: "18 April 2026",
-    readTime: "6 min read",
-    title: "Why You Need 3–5 Resume Versions (And How to Manage Them)",
-    excerpt: "Different roles need different narratives. The tracker reflects that by giving resume files labels, upload flows, extraction, and reporting hooks.",
-    tags: ["resume", "job search", "strategy"],
-    content: [
-      {
-        paragraphs: [
-          "Resume management is not bolted on. The bundle exposes upload, extract, report, and latest-report routes, and the authenticated API returns labeled resume records.",
-          "That structure maps cleanly to a resume vault where each job application can reference a specific version."
-        ]
-      }
-    ]
-  }
-];
-
-export const publicProfiles: PublicProfile[] = [
-  {
-    slug: "jaan",
-    name: "Jaan",
-    headline: "Builder of quiet tools for job hunters",
-    location: "India",
-    about: "Public profiles on the live site are intentionally restrained. This clone expands the profile so the route feels like a product surface rather than a placeholder.",
-    skills: ["Product strategy", "Growth writing", "UI systems", "Community"],
-    experiences: [
-      {
-        company: "Naukri Clear",
-        title: "Founder",
-        period: "2025 - Present",
-        summary: "Building a tracker, a public community, and a browser clipper around a calmer job search workflow."
-      }
-    ],
-    educations: [
-      {
-        school: "Independent builder path",
-        degree: "Product and engineering",
-        period: "Ongoing"
-      }
-    ],
-    projects: [
-      {
-        name: "Naukri Clear",
-        summary: "Job tracker, public profile system, community feed, resume review board, and extension workflow."
-      }
-    ]
-  },
-  {
-    slug: "salwyn-mathew",
-    name: "Salwyn Mathew",
-    headline: "Frontend engineer with a bias toward systems",
-    location: "Remote",
-    about: "A stronger public profile example for the cloned site, showing how profile content can advertise work history, skills, and projects.",
-    skills: ["React", "TypeScript", "Design systems", "Accessibility"],
-    experiences: [
-      {
-        company: "Acme UI",
-        title: "Frontend Engineer",
-        period: "2023 - Present",
-        summary: "Shipped cross-product component libraries and created editorial landing systems."
-      }
-    ],
-    educations: [
-      {
-        school: "University of Design and Computing",
-        degree: "B.Tech",
-        period: "2018 - 2022"
-      }
-    ],
-    projects: [
-      {
-        name: "Palette Audit",
-        summary: "An interface tool for finding contrast and spacing drift in complex design systems."
-      }
-    ]
-  }
-];
-
-export function getBlogPost(slug: string) {
-  return blogPosts.find((post) => post.slug === slug);
-}
-
-export function getPublicProfile(slug: string) {
-  return publicProfiles.find((profile) => profile.slug === slug);
-}

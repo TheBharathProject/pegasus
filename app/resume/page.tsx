@@ -6,6 +6,7 @@ import { ArrowRightIcon, UploadIcon } from "@/components/icons";
 import { renderMarkdown } from "@/lib/markdown";
 import { api, ApiError } from "@/lib/api-client";
 import { isAuthed } from "@/lib/auth";
+import { goTo } from "@/lib/paths";
 
 type AIReport = {
   id: string;
@@ -36,7 +37,7 @@ export default function ResumeAiPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && !isAuthed()) {
-      window.location.href = "/login";
+      goTo("/login");
       return;
     }
     api

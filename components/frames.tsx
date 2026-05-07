@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import {
   ArrowUpRightIcon,
+  BellIcon,
   BriefcaseIcon,
   ChatIcon,
   ChevronLeft,
@@ -17,9 +18,9 @@ import {
   MenuIcon,
   NotebookIcon,
   SettingsIcon,
-  UserIcon,
   UserPlusIcon
 } from "./icons";
+import { useAuth, signOut } from "@/lib/auth";
 
 type MarketingFrameProps = {
   children: ReactNode;
@@ -33,6 +34,7 @@ type ProductNavKey =
   | "profile"
   | "resume"
   | "resumes"
+  | "notifications"
   | "settings"
   | "community";
 
@@ -72,9 +74,9 @@ const productNavGroups: Array<{ label?: string; links: NavLink[] }> = [
   {
     label: "You",
     links: [
-      { href: "/profile", label: "Profile", key: "profile", Icon: UserIcon },
       { href: "/resume", label: "Resume AI", key: "resume", Icon: FileIcon },
       { href: "/resumes", label: "Vault", key: "resumes", Icon: FolderIcon },
+      { href: "/notifications", label: "Notifications", key: "notifications", Icon: BellIcon },
       { href: "/settings", label: "Settings", key: "settings", Icon: SettingsIcon }
     ]
   },
@@ -121,13 +123,43 @@ function useSidebarState(): [boolean, () => void] {
   return [collapsed, toggle];
 }
 
+function MarketingAuthCta() {
+  const { authed, loading } = useAuth();
+  // Render nothing while the hook is determining auth state. Avoids the
+  // "Sign in" → "Dashboard" flicker on hydration.
+  if (loading) return null;
+  if (authed) {
+    return (
+      <>
+        <Link className="primary-button" href="/dashboard">
+          Dashboard
+        </Link>
+        <button
+          className="ghost-button"
+          type="button"
+          onClick={() => {
+            void signOut("/");
+          }}
+        >
+          Sign out
+        </button>
+      </>
+    );
+  }
+  return (
+    <Link className="ghost-button" href="/login">
+      Sign in
+    </Link>
+  );
+}
+
 export function MarketingFrame({ children, current = "home" }: MarketingFrameProps) {
   return (
     <div className="marketing-frame">
       <header className="topbar shell">
         <Link className="brand" href="/">
-          <span className="brand-badge">NC</span>
-          <span>Naukri Clear</span>
+          <span className="brand-badge">P</span>
+          <span>Pegasus</span>
         </Link>
         <nav className="topnav">
           {marketingLinks.map((link) => (
@@ -139,26 +171,26 @@ export function MarketingFrame({ children, current = "home" }: MarketingFramePro
               {link.label}
             </Link>
           ))}
-          <Link className="ghost-button" href="/login">
-            Sign in
-          </Link>
+          <MarketingAuthCta />
         </nav>
       </header>
       {children}
       <footer className="footer shell">
         <div>
-          <div className="footer-title">Naukri Clear</div>
+          <div className="footer-title">Pegasus</div>
           <p className="muted">
             Job tracking, public profiles, community advice, and a browser clipper in one calm
             surface.
           </p>
+          <p className="muted small">by Shubham</p>
         </div>
         <nav className="footer-nav">
           <Link href="/">Home</Link>
-          <Link href="/blog">Blog</Link>
+          {/* Plain <a> escapes basePath /pegasus and lands on the sypher.in apex. */}
+          <a href="/blog">Blog</a>
           <Link href="/community">Community</Link>
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/terms">Terms</Link>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
         </nav>
       </footer>
     </div>
@@ -236,11 +268,11 @@ export function ProductFrame({
         <Link
           className="brand brand-sidebar"
           href="/dashboard"
-          aria-label="Naukri Clear"
+          aria-label="Pegasus"
           onClick={() => setDrawerOpen(false)}
         >
-          <span className="brand-badge">NC</span>
-          <span className="brand-text">Naukri Clear</span>
+          <span className="brand-badge">P</span>
+          <span className="brand-text">Pegasus</span>
         </Link>
         <nav className="sidebar-nav">
           {productNavGroups.map((group, index) => (
@@ -272,16 +304,7 @@ export function ProductFrame({
           ))}
         </nav>
         <div className="sidebar-spacer" />
-        <div className="sidebar-user" aria-label="Account">
-          <span className="avatar-dot" />
-          <div className="sidebar-user-copy">
-            <strong>Shubham Dixit</strong>
-            <span>dixit.shubh18@gmail.com</span>
-          </div>
-          <span className="signout-icon" aria-hidden="true">
-            <ArrowUpRightIcon width={14} height={14} />
-          </span>
-        </div>
+        <SidebarUser />
       </aside>
       <main className={noPadding ? "product-main is-flush" : "product-main"}>
         {showHeader ? (
@@ -301,6 +324,27 @@ export function ProductFrame({
         {children}
       </main>
     </div>
+  );
+}
+
+function SidebarUser() {
+  const { authed, loading, user } = useAuth();
+  if (loading || !authed || !user) {
+    return null;
+  }
+  // Clicks navigate to /profile (per user request). Sign-out lives in
+  // Settings and on the marketing top-bar.
+  return (
+    <Link className="sidebar-user" href="/profile" aria-label="Open your profile">
+      <span className="avatar-dot" />
+      <div className="sidebar-user-copy">
+        <strong>{user.name}</strong>
+        <span>{user.email}</span>
+      </div>
+      <span className="signout-icon" aria-hidden="true">
+        <ArrowUpRightIcon width={14} height={14} />
+      </span>
+    </Link>
   );
 }
 

@@ -7,6 +7,7 @@ import { MetricCard } from "@/components/ui";
 import { ArrowRightIcon } from "@/components/icons";
 import { api, type ApiApplication, type ApiDashboard, type ApiUser } from "@/lib/api-client";
 import { isAuthed } from "@/lib/auth";
+import { goTo } from "@/lib/paths";
 
 function greetingFor(hour: number): string {
   if (hour < 4) return "Still up,";
@@ -51,7 +52,7 @@ export default function DashboardPage() {
   useEffect(() => {
     setGreeting(greetingFor(new Date().getHours()));
     if (typeof window !== "undefined" && !isAuthed()) {
-      window.location.href = "/login";
+      goTo("/login");
       return;
     }
     Promise.all([

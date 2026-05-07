@@ -184,6 +184,35 @@ export function PencilIcon(props: Props) {
   );
 }
 
+export function TagIcon(props: Props) {
+  return (
+    <Svg {...props}>
+      <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
+
+export function CalendarIcon(props: Props) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="4.5" width="18" height="17" rx="2" />
+      <path d="M16 2.5v4" />
+      <path d="M8 2.5v4" />
+      <path d="M3 10.5h18" />
+    </Svg>
+  );
+}
+
+export function BellIcon(props: Props) {
+  return (
+    <Svg {...props}>
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9z" />
+      <path d="M10.3 21a2 2 0 0 0 3.4 0" />
+    </Svg>
+  );
+}
+
 export function EyeIcon(props: Props) {
   return (
     <Svg {...props}>

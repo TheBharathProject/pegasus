@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Naukri Clear",
+  title: "Pegasus",
   description:
     "A small calm place for the loud work of looking. Track applications, write notes, save resumes, and follow your search."
 };
