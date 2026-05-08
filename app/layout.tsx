@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import { StorageSync } from "@/components/storage-sync";
 
 export const metadata: Metadata = {
   title: "Pegasus",
@@ -34,7 +35,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: bootScript }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <StorageSync />
+        {children}
+      </body>
     </html>
   );
 }
