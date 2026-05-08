@@ -237,6 +237,25 @@ export default function SettingsPage() {
     window.location.href = "/";
   };
 
+  // Email opt-in toggle. Premium-gated: free users never see the toggle
+  // (Upgrade CTA renders instead), and the API independently enforces a
+  // 402 if a free user POSTs enabled=true. See ADR-002 (D2/D4).
+  const [savingEmailPref, setSavingEmailPref] = useState(false);
+  const handleEmailPrefToggle = async (next: boolean) => {
+    if (savingEmailPref) return;
+    setSavingEmailPref(true);
+    try {
+      const updated = await api.patch<ApiUser>("/job-tracker/me/email-prefs", {
+        enabled: next
+      });
+      setUser(updated);
+    } catch (e) {
+      window.alert(`Could not update preference: ${(e as Error).message}`);
+    } finally {
+      setSavingEmailPref(false);
+    }
+  };
+
   const aiUsedDisplay = usage ? usage.used.toLocaleString() : "—";
   const aiLimitDisplay = usage && usage.limit > 0 ? usage.limit.toLocaleString() : "—";
 
@@ -287,6 +306,43 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
+        </article>
+
+        <article className="settings-section">
+          <h2>Email notifications</h2>
+          <p className="muted small">
+            In-app notifications are free for everyone. Email digests +
+            community-reply nudges are a premium perk.
+          </p>
+          {user?.isPremium ? (
+            <label className="email-pref-row">
+              <input
+                type="checkbox"
+                checked={user?.emailNotificationsEnabled ?? false}
+                disabled={savingEmailPref}
+                onChange={(e) => handleEmailPrefToggle(e.target.checked)}
+              />
+              <span>
+                <strong>Email me about activity</strong>
+                <span className="muted small">
+                  Daily digest at 09:00 IST and replies on your community posts.
+                </span>
+              </span>
+            </label>
+          ) : (
+            <div className="email-pref-upgrade">
+              <div>
+                <strong>Email digest is a Premium feature</strong>
+                <p className="muted small">
+                  Pegasus quietly emails you only when there&apos;s a reason — stale
+                  applications, approaching deadlines, replies on what you posted.
+                </p>
+              </div>
+              <a className="primary-button" href="/upgrade">
+                Upgrade
+              </a>
+            </div>
+          )}
         </article>
 
         <article className="settings-section">

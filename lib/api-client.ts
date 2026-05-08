@@ -103,6 +103,11 @@ export type ApiUser = {
   name: string;
   pictureUrl?: string;
   timezone: string;
+  // Premium flag + per-user email opt-in. Free users have isPremium=false
+  // and the toggle is hidden from Settings (replaced with an Upgrade CTA);
+  // see docs/adr/0002-premium-email-gating.md (D4).
+  isPremium: boolean;
+  emailNotificationsEnabled: boolean;
 };
 
 export type ApiStageChange = {

@@ -2547,6 +2547,174 @@ html[data-sb="collapsed"] .signout-icon {
   color: var(--text);
 }
 
+/* Email-pref toggle row (premium users) */
+.email-pref-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-soft);
+  cursor: pointer;
+  transition: border-color 160ms ease;
+}
+
+.email-pref-row:hover {
+  border-color: var(--border-strong);
+}
+
+.email-pref-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: var(--text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.email-pref-row > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.email-pref-row strong {
+  color: var(--text);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* /upgrade page — stub while Stripe is being wired. Editorial layout
+   matching the rest of the product surface. */
+.upgrade-stack {
+  display: grid;
+  gap: 28px;
+  margin-top: 14px;
+  max-width: 640px;
+}
+
+.upgrade-perks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+
+.upgrade-perks > li {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.upgrade-perk-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.upgrade-perks strong {
+  font-family: var(--font-serif-stack);
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.upgrade-perks p {
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-soft);
+  margin: 0;
+}
+
+.upgrade-form-card {
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-soft);
+}
+
+.upgrade-form-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.upgrade-form-row input {
+  flex: 1;
+  min-height: 38px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--bg-input);
+  outline: none;
+  font-size: 14px;
+}
+
+.upgrade-form-row input:focus {
+  border-color: var(--rule-high);
+}
+
+.upgrade-form-success {
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  color: var(--text);
+  font-size: 14px;
+  text-align: center;
+  padding: 18px 0;
+  margin: 0;
+}
+
+.upgrade-fineprint {
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+}
+
+/* Upgrade CTA row (free users) — premium feature, locked */
+.email-pref-upgrade {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-soft);
+}
+
+.email-pref-upgrade > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.email-pref-upgrade strong {
+  color: var(--text);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.email-pref-upgrade p {
+  margin-top: 4px;
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
 .billing-row {
   display: flex;
   align-items: center;
