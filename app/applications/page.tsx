@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProductFrame } from "@/components/frames";
 import { MetricCard, Pill } from "@/components/ui";
+import { ApplicationTimeline } from "@/components/timeline";
 import {
   api,
   apiBaseUrl,
@@ -752,49 +753,12 @@ export default function ApplicationsPage() {
 
                 <section className="app-detail-section">
                   <p className="eyebrow">Timeline</p>
-                  {timelineLoading && timeline.length === 0 ? (
-                    <p className="muted small" style={{ marginTop: 10 }}>
-                      Loading…
-                    </p>
-                  ) : (
-                    <ul className="app-timeline">
-                      {timeline.map((entry, idx) => {
-                        const isInitial = !entry.from;
-                        return (
-                          <li key={`${entry.changedAt}-${idx}`}>
-                            <span className="app-timeline-dot">
-                              {isInitial ? (
-                                <PlusIcon width={12} height={12} />
-                              ) : (
-                                <PencilIcon width={12} height={12} />
-                              )}
-                            </span>
-                            <div>
-                              <em>
-                                {isInitial
-                                  ? "Application added."
-                                  : `Moved from ${STAGE_LABELS[entry.from!] ?? entry.from} to ${STAGE_LABELS[entry.to] ?? entry.to}.`}
-                              </em>
-                              <span className="muted small">{fmtRelative(entry.changedAt)}</span>
-                            </div>
-                          </li>
-                        );
-                      })}
-                      {timeline.length === 0 && !timelineLoading ? (
-                        <li>
-                          <span className="app-timeline-dot">
-                            <PlusIcon width={12} height={12} />
-                          </span>
-                          <div>
-                            <em>Application added.</em>
-                            <span className="muted small">
-                              {fmtRelative(viewingApp.createdAt)}
-                            </span>
-                          </div>
-                        </li>
-                      ) : null}
-                    </ul>
-                  )}
+                  <ApplicationTimeline
+                    changes={timeline}
+                    loading={timelineLoading}
+                    fallbackAddedAt={viewingApp.createdAt}
+                    fallbackInitialStage={viewingApp.stage}
+                  />
                 </section>
               </aside>
             </div>

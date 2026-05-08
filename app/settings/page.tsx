@@ -72,6 +72,21 @@ export default function SettingsPage() {
   const [showCancel, setShowCancel] = useState(false);
   const [showFeedbackOk, setShowFeedbackOk] = useState(false);
 
+  // Slug edit state — inline input that replaces the static <code>{profileUrl}</code>
+  // when "Update URL" is clicked. Live availability is checked as the user types
+  // via GET /profile/slug/check.
+  const [slugEditing, setSlugEditing] = useState(false);
+  const [slugDraft, setSlugDraft] = useState("");
+  const [slugCheck, setSlugCheck] = useState<
+    "idle" | "checking" | "available" | "taken" | "invalid" | "same"
+  >("idle");
+
+  // Delete-account modal state. Requires the user to type "delete" before
+  // the destructive button enables — small friction in front of an
+  // irreversible action.
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     if (typeof window !== "undefined" && !isAuthed()) {
       goTo("/login");
@@ -138,17 +153,78 @@ export default function SettingsPage() {
     }
   };
 
-  const handleUpdateSlug = async () => {
-    const slug = window.prompt(
-      "New profile URL slug (lowercase a-z, 0-9, dash)",
-      profile?.slug || ""
-    );
-    if (!slug) return;
+  const startSlugEdit = () => {
+    setSlugDraft(profile?.slug ?? "");
+    setSlugCheck("same");
+    setSlugEditing(true);
+  };
+
+  const cancelSlugEdit = () => {
+    setSlugEditing(false);
+    setSlugDraft("");
+    setSlugCheck("idle");
+  };
+
+  const handleSaveSlug = async () => {
+    if (slugCheck !== "available") return;
     try {
-      const updated = await api.patch<ApiProfile>("/job-tracker/profile/slug", { slug });
+      const updated = await api.patch<ApiProfile>("/job-tracker/profile/slug", {
+        slug: slugDraft
+      });
       setProfile(updated);
+      setSlugEditing(false);
+      setSlugCheck("idle");
     } catch (e) {
       window.alert(`Update failed: ${(e as Error).message}`);
+    }
+  };
+
+  // Debounced live availability check. Runs only while editing — kicks off
+  // after 350ms of input idle, cancels on rapid typing.
+  useEffect(() => {
+    if (!slugEditing) return;
+    const trimmed = slugDraft.trim().toLowerCase();
+    if (trimmed === (profile?.slug ?? "")) {
+      setSlugCheck("same");
+      return;
+    }
+    if (!/^[a-z0-9-]{3,40}$/.test(trimmed)) {
+      setSlugCheck("invalid");
+      return;
+    }
+    setSlugCheck("checking");
+    const t = setTimeout(async () => {
+      try {
+        const res = await api.get<{ slug: string; available: boolean }>(
+          `/job-tracker/profile/slug/check?slug=${encodeURIComponent(trimmed)}`
+        );
+        // Guard against late responses landing after the user typed more.
+        setSlugCheck((curr) =>
+          curr === "checking" && res.slug === trimmed
+            ? res.available
+              ? "available"
+              : "taken"
+            : curr
+        );
+      } catch {
+        setSlugCheck("invalid");
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [slugDraft, slugEditing, profile?.slug]);
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm.trim().toLowerCase() !== "delete" || deleting) return;
+    setDeleting(true);
+    try {
+      await api.post("/job-tracker/me/delete");
+      clearToken();
+      // Land on the apex (escapes /pegasus). Account is gone, no point
+      // bouncing them to a tool surface that'll just kick them to /login.
+      window.location.href = "/";
+    } catch (e) {
+      setDeleting(false);
+      window.alert(`Delete failed: ${(e as Error).message}`);
     }
   };
 
@@ -246,7 +322,7 @@ export default function SettingsPage() {
             type="button"
             onClick={() => setShowCancel(true)}
           >
-            Cancel subscription
+            Delete account
           </button>
         </article>
 
@@ -254,38 +330,81 @@ export default function SettingsPage() {
           <h2 style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
             <GlobeIcon width={18} height={18} /> Profile
           </h2>
-          <p style={{ marginTop: 14 }}>
-            <code>{profileUrl}</code>
-          </p>
-          <div className="section-actions">
-            <button
-              className="ghost-button"
-              type="button"
-              disabled={!profile?.slug}
-              onClick={() => handleCopy("https://" + profileUrl)}
-            >
-              {copyStatus ?? "Copy"}
-            </button>
-            <a
-              className="ghost-button"
-              href={profile?.slug ? `/u/${profile.slug}` : "#"}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Preview
-            </a>
-            <button className="ghost-button" type="button" onClick={handleUpdateSlug}>
-              Update URL
-            </button>
-            <label className="ghost-button" style={{ cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={!profile?.isPublic}
-                onChange={handleToggleVisibility}
-              />{" "}
-              Hide
-            </label>
-          </div>
+
+          {slugEditing ? (
+            <div style={{ marginTop: 14 }}>
+              <div className="slug-edit-row">
+                <span className="slug-edit-prefix">sypher.in/u/</span>
+                <input
+                  className="slug-edit-input"
+                  value={slugDraft}
+                  onChange={(e) =>
+                    setSlugDraft(e.target.value.toLowerCase().replace(/\s+/g, ""))
+                  }
+                  placeholder="your-slug"
+                  autoFocus
+                  spellCheck={false}
+                />
+              </div>
+              <p className={`slug-status slug-status--${slugCheck}`}>
+                {slugCheck === "checking" && "Checking…"}
+                {slugCheck === "available" && "Available"}
+                {slugCheck === "taken" && "Taken"}
+                {slugCheck === "invalid" &&
+                  "Use 3–40 characters: lowercase a–z, 0–9, dash"}
+                {slugCheck === "same" && "This is your current URL"}
+                {slugCheck === "idle" && " "}
+              </p>
+              <div className="section-actions">
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={handleSaveSlug}
+                  disabled={slugCheck !== "available"}
+                >
+                  Save
+                </button>
+                <button className="ghost-button" type="button" onClick={cancelSlugEdit}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p style={{ marginTop: 14 }}>
+                <code>{profileUrl}</code>
+              </p>
+              <div className="section-actions">
+                <button
+                  className="ghost-button"
+                  type="button"
+                  disabled={!profile?.slug}
+                  onClick={() => handleCopy("https://" + profileUrl)}
+                >
+                  {copyStatus ?? "Copy"}
+                </button>
+                <a
+                  className="ghost-button"
+                  href={profile?.slug ? `/u/${profile.slug}` : "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Preview
+                </a>
+                <button className="ghost-button" type="button" onClick={startSlugEdit}>
+                  Update URL
+                </button>
+                <label className="ghost-button" style={{ cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={!profile?.isPublic}
+                    onChange={handleToggleVisibility}
+                  />{" "}
+                  Hide
+                </label>
+              </div>
+            </>
+          )}
         </article>
 
         <article className="settings-section">
@@ -335,35 +454,76 @@ export default function SettingsPage() {
       </section>
 
       {showCancel ? (
-        <div className="modal-backdrop" onClick={() => setShowCancel(false)} role="dialog" aria-modal="true">
-          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            setShowCancel(false);
+            setDeleteConfirm("");
+          }}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 460 }}
+          >
             <div className="list-head">
-              <h2>Cancel subscription?</h2>
+              <h2>Delete your account?</h2>
               <button
                 className="icon-button"
                 aria-label="Close"
                 type="button"
-                onClick={() => setShowCancel(false)}
+                onClick={() => {
+                  setShowCancel(false);
+                  setDeleteConfirm("");
+                }}
               >
                 <CloseIcon width={14} height={14} />
               </button>
             </div>
-            <p className="muted" style={{ marginTop: 12, fontFamily: "var(--font-serif-stack)", fontStyle: "italic" }}>
-              You&apos;ll keep Pro until the end of this billing period, then drop to the free plan.
+            <p
+              className="muted"
+              style={{
+                marginTop: 12,
+                fontFamily: "var(--font-serif-stack)",
+                fontStyle: "italic"
+              }}
+            >
+              This wipes every application, note, resume, and profile field tied to
+              your account. Cannot be undone. Your sign-in (Google) stays — you can
+              start over later if you want, but the data is gone.
             </p>
+            <div className="field" style={{ marginTop: 18 }}>
+              <label>Type <strong>delete</strong> to confirm</label>
+              <input
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="delete"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
             <div className="section-actions" style={{ justifyContent: "flex-end" }}>
-              <button className="ghost-button" type="button" onClick={() => setShowCancel(false)}>
-                Keep Pro
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => {
+                  setShowCancel(false);
+                  setDeleteConfirm("");
+                }}
+              >
+                Keep account
               </button>
               <button
                 className="primary-button"
                 type="button"
-                onClick={() => {
-                  setShowCancel(false);
-                  window.alert("Subscription cancellation queued (demo).");
-                }}
+                onClick={handleDeleteAccount}
+                disabled={
+                  deleteConfirm.trim().toLowerCase() !== "delete" || deleting
+                }
               >
-                Cancel anyway
+                {deleting ? "Deleting…" : "Delete forever"}
               </button>
             </div>
           </div>

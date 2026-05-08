@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProductFrame } from "@/components/frames";
+import { ResumeCompare } from "@/components/resume-compare";
 import {
   CalendarIcon,
   ChatIcon,
@@ -11,6 +12,7 @@ import {
   EyeIcon,
   FileIcon,
   PencilIcon,
+  SplitIcon,
   TagIcon,
   TrashIcon,
   UploadIcon
@@ -53,11 +55,45 @@ export default function ResumesPage() {
   const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
   const [editingLabelValue, setEditingLabelValue] = useState("");
   const [savingLabel, setSavingLabel] = useState(false);
+  // Usage counts per resume file id — populated after vault loads. Used to
+  // show "Reviewed N times" badge below files that have AI reports against
+  // them. Cover letters don't have usage today (no link table).
+  const [usage, setUsage] = useState<Record<string, number>>({});
+  // Compare-modal state. Holds the slot id that triggered the modal so the
+  // left pane defaults to that resume; right pane defaults to the next slot.
+  const [compareLeftId, setCompareLeftId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   // Trigger an AI resume report for the given file. The /resume page will
   // pick up the new "latest" report on mount; we just navigate there once
   // the backend confirms the report is saved.
+  // Open a presigned R2 GET URL in a new tab. Used by both Preview and Download.
+  // The download flow then forces an `<a download>` so the browser saves
+  // instead of rendering inline.
+  const openViewURL = async (file: ApiFile, mode: "preview" | "download") => {
+    const path =
+      file.kind === "resume"
+        ? `/job-tracker/resumes/${file.id}/view-url`
+        : `/job-tracker/cover-letters/${file.id}/view-url`;
+    try {
+      const r = await api.get<{ viewUrl: string }>(path);
+      if (mode === "preview") {
+        window.open(r.viewUrl, "_blank", "noopener");
+      } else {
+        const a = document.createElement("a");
+        a.href = r.viewUrl;
+        a.download = file.fileName || "resume.pdf";
+        a.rel = "noopener";
+        a.target = "_blank";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+    } catch (e) {
+      window.alert(`Could not open file: ${(e as Error).message}`);
+    }
+  };
+
   const requestReview = async (file: ApiFile) => {
     setReviewBusyId(file.id);
     try {
@@ -76,7 +112,19 @@ export default function ResumesPage() {
         api.get<ApiResumesResponse>("/job-tracker/resumes"),
         api.get<ApiCoverLettersResponse>("/job-tracker/cover-letters")
       ]);
-      setVault({ resumes: r.resumes ?? [], covers: c.coverLetters ?? [] });
+      const resumes = r.resumes ?? [];
+      setVault({ resumes, covers: c.coverLetters ?? [] });
+      // Fan out usage queries — small N (5 max), parallel, ignore individual
+      // failures so one stuck request doesn't blank the whole vault badges.
+      const counts = await Promise.all(
+        resumes.map((f) =>
+          api
+            .get<{ aiReports: number }>(`/job-tracker/resumes/${f.id}/usage`)
+            .then((u) => [f.id, u.aiReports] as const)
+            .catch(() => [f.id, 0] as const)
+        )
+      );
+      setUsage(Object.fromEntries(counts));
     } catch {
       /* keep prior state */
     }
@@ -280,6 +328,15 @@ export default function ResumesPage() {
                           <CalendarIcon width={9} height={9} />
                           {dt.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
                         </span>
+                        {kind === "resumes" && (usage[file.id] ?? 0) > 0 ? (
+                          <>
+                            <span className="file-meta-sep">·</span>
+                            <span className="file-meta-usage">
+                              Reviewed {usage[file.id]}{" "}
+                              {usage[file.id] === 1 ? "time" : "times"}
+                            </span>
+                          </>
+                        ) : null}
                       </p>
                     </div>
                   </div>
@@ -339,13 +396,13 @@ export default function ResumesPage() {
                     </div>
                   )}
                 </div>
-                <div className={kind === "resumes" ? "slot-actions" : "slot-actions cols-4"}>
+                <div className={kind === "resumes" ? "slot-actions cols-6" : "slot-actions cols-4"}>
                   <button
                     className="icon-button"
                     aria-label="Preview"
                     title="Preview"
                     type="button"
-                    onClick={() => window.alert(`${file.fileName} preview not wired yet.`)}
+                    onClick={() => openViewURL(file, "preview")}
                   >
                     <EyeIcon width={13} height={13} />
                   </button>
@@ -354,7 +411,7 @@ export default function ResumesPage() {
                     aria-label="Download"
                     title="Download"
                     type="button"
-                    onClick={() => window.alert(`${file.fileName} download not wired yet.`)}
+                    onClick={() => openViewURL(file, "download")}
                   >
                     <DownloadIcon width={13} height={13} />
                   </button>
@@ -368,16 +425,28 @@ export default function ResumesPage() {
                     <UploadIcon width={13} height={13} />
                   </button>
                   {kind === "resumes" ? (
-                    <button
-                      className="icon-button"
-                      aria-label="Get review (AI)"
-                      title={reviewBusyId === file.id ? "Generating review…" : "Get review (AI)"}
-                      type="button"
-                      disabled={reviewBusyId !== null}
-                      onClick={() => requestReview(file)}
-                    >
-                      <ChatIcon width={13} height={13} />
-                    </button>
+                    <>
+                      <button
+                        className="icon-button"
+                        aria-label="Compare with another resume"
+                        title="Compare"
+                        type="button"
+                        disabled={vault.resumes.length < 2}
+                        onClick={() => setCompareLeftId(file.id)}
+                      >
+                        <SplitIcon width={13} height={13} />
+                      </button>
+                      <button
+                        className="icon-button"
+                        aria-label="Get review (AI)"
+                        title={reviewBusyId === file.id ? "Generating review…" : "Get review (AI)"}
+                        type="button"
+                        disabled={reviewBusyId !== null}
+                        onClick={() => requestReview(file)}
+                      >
+                        <ChatIcon width={13} height={13} />
+                      </button>
+                    </>
                   ) : null}
                   <button
                     className="icon-button is-danger"
@@ -629,6 +698,14 @@ export default function ResumesPage() {
             )}
           </div>
         </div>
+      ) : null}
+
+      {compareLeftId ? (
+        <ResumeCompare
+          resumes={vault.resumes}
+          initialLeftId={compareLeftId}
+          onClose={() => setCompareLeftId(null)}
+        />
       ) : null}
     </ProductFrame>
   );

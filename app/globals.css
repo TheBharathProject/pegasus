@@ -2214,6 +2214,12 @@ html[data-sb="collapsed"] .signout-icon {
   opacity: 0.6;
 }
 
+.slot-card .file-meta-usage {
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  color: var(--text-soft);
+}
+
 /* Label — small, chromeless button. Pencil reveals on hover only. */
 .slot-card .label-row {
   margin-top: 12px;
@@ -2323,6 +2329,10 @@ html[data-sb="collapsed"] .signout-icon {
 
 .slot-card .slot-actions.cols-4 {
   grid-template-columns: repeat(4, 1fr);
+}
+
+.slot-card .slot-actions.cols-6 {
+  grid-template-columns: repeat(6, 1fr);
 }
 
 .slot-actions .icon-button {
@@ -2547,6 +2557,151 @@ html[data-sb="collapsed"] .signout-icon {
 .feedback-box:focus {
   border-color: var(--rule-high);
 }
+
+/* APPLICATIONS — vertical stage timeline (used inside the detail modal). */
+.timeline {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  position: relative;
+}
+
+/* The vertical rule that links every dot. Sits behind the dots, doesn't
+   need to extend past the last item. */
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--border);
+}
+
+.timeline-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 0 14px;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-dot {
+  width: 14px;
+  height: 14px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1.5px solid var(--text-faint);
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-dot--initial {
+  background: var(--text);
+  border-color: var(--text);
+}
+
+.timeline-dot--change {
+  background: var(--surface-2);
+  border-color: var(--text-soft);
+}
+
+.timeline-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.timeline-line {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.timeline-verb {
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  color: var(--text-soft);
+  font-size: 13px;
+  margin-right: 2px;
+}
+
+.timeline-arrow {
+  display: inline-flex;
+  color: var(--text-faint);
+  margin: 0 1px;
+}
+
+.timeline-time {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* SETTINGS — slug inline editor */
+.slug-edit-row {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  overflow: hidden;
+  max-width: 100%;
+  font-family: ui-monospace, SFMono-Regular, "Roboto Mono", monospace;
+}
+
+.slug-edit-row:focus-within {
+  border-color: var(--rule-high);
+}
+
+.slug-edit-prefix {
+  padding: 8px 10px;
+  background: var(--bg-soft);
+  color: var(--text-faint);
+  font-size: 13px;
+  border-right: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.slug-edit-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 10px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.slug-status {
+  margin: 6px 0 0;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  min-height: 1.4em;
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+}
+.slug-status--checking { color: var(--text-faint); }
+.slug-status--available { color: #62c18b; font-style: normal; }
+.slug-status--taken { color: #ef6f6c; font-style: normal; }
+.slug-status--invalid { color: #d6a04a; }
+.slug-status--same { color: var(--text-faint); }
+.slug-status--idle { color: transparent; }
 
 /* PROFILE PAGE */
 .profile-section-grid {
@@ -6890,6 +7045,84 @@ html[data-sb="expanded"] .product-frame {
   width: min(100%, 1080px);
   position: relative;
   padding: 32px 36px;
+}
+
+/* Resume compare modal — wider canvas, two PDF iframes side by side. */
+.compare-modal {
+  height: min(100vh - 48px, 880px);
+  display: flex;
+  flex-direction: column;
+}
+
+.compare-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 18px;
+  min-height: 0;
+}
+
+@media (max-width: 760px) {
+  .compare-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+}
+
+.compare-pane {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-soft);
+  min-height: 0;
+}
+
+.compare-pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.compare-pane-head select {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12.5px;
+  outline: none;
+}
+
+.compare-pane-body {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  min-height: 0;
+}
+
+.compare-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--bg);
+}
+
+.compare-empty {
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  color: var(--text-faint);
+  font-size: 13px;
+  padding: 40px 20px;
 }
 
 .app-detail-close {
