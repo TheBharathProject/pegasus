@@ -257,6 +257,25 @@ export type ApiResumesResponse = {
   limit: number;
 };
 
+// Notification (Phase 2). Server returns ISO-8601 strings for the
+// timestamps; readAt is omitted when the row is unread.
+export type ApiNotification = {
+  id: string;
+  kind: string;        // "app_stale" | "app_deadline" | "community_reply" | "digest" | future
+  refType?: string;
+  refId?: string;
+  title: string;
+  body?: string;
+  linkPath?: string;
+  readAt?: string;
+  createdAt: string;
+};
+
+export type ApiNotificationListResponse = {
+  items: ApiNotification[];
+  nextCursor: string | null;
+};
+
 export type ApiCoverLettersResponse = {
   coverLetters: ApiFile[];
   count: number;

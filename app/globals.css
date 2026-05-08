@@ -494,12 +494,43 @@ html[data-sb="expanded"] .sidebar-link.active {
   height: 36px;
   color: currentColor;
   flex-shrink: 0;
+  position: relative;
 }
 
 .nav-icon svg {
   width: 18px;
   height: 18px;
   display: block;
+}
+
+/* Tiny saffron dot in the icon's top-right corner. Visible whether the
+   sidebar is collapsed (icon only) or expanded (icon + label). When
+   expanded, the .nav-badge below carries the actual count. */
+.nav-icon-dot {
+  position: absolute;
+  top: 8px;
+  right: 18px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #e85d04;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+/* Inline count chip next to the label when the sidebar is expanded.
+   Hidden alongside the label in collapsed mode (the dot carries the
+   "you have unread" signal at that width). */
+.nav-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #e85d04;
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
 }
 
 .nav-label {
@@ -2982,6 +3013,132 @@ html[data-sb="collapsed"] .signout-icon {
 .filter-box:hover {
   color: var(--text);
   border-color: var(--border-strong);
+}
+
+.filter-box.is-active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.filter-box.is-active:hover {
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+/* NOTIFICATIONS — list of rows on /notifications. Same hairline-ruled
+   rhythm as the journal index; left-icon, body, right-side relative time.
+   Unread rows get a subtle background tint + leading dot. */
+.notif-list {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+
+.notif-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 4px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 160ms ease, padding-left 160ms ease;
+}
+
+.notif-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+  padding-left: 8px;
+}
+
+[data-theme="light"] .notif-row:hover {
+  background: rgba(0, 0, 0, 0.025);
+}
+
+.notif-row--unread {
+  background: rgba(255, 255, 255, 0.018);
+}
+
+[data-theme="light"] .notif-row--unread {
+  background: rgba(0, 0, 0, 0.018);
+}
+
+.notif-row--unread .notif-title {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Saffron dot in the top-right of the icon tile — same visual language as
+   the sidebar bell badge so "unread" reads consistently across surfaces.
+   Positioned on .notif-icon, NOT on .notif-row, because a pseudo-element
+   directly on the row gets allocated a grid cell and shoves the columns
+   around — that was the original bug. */
+.notif-row--unread .notif-icon {
+  position: relative;
+}
+
+.notif-row--unread .notif-icon::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #e85d04;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.notif-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.notif-body {
+  min-width: 0;
+}
+
+.notif-eyebrow {
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 4px;
+}
+
+.notif-title {
+  font-family: var(--font-serif-stack);
+  font-size: 15.5px;
+  letter-spacing: -0.01em;
+  color: var(--text-soft);
+  line-height: 1.3;
+  margin: 0;
+}
+
+.notif-detail {
+  margin-top: 4px;
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+
+.notif-time {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+  margin-top: 4px;
 }
 
 .community-tabs {

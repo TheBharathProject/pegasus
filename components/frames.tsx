@@ -21,6 +21,7 @@ import {
   UserPlusIcon
 } from "./icons";
 import { useAuth, signOut } from "@/lib/auth";
+import { useUnreadCount } from "@/lib/notifications";
 
 type MarketingFrameProps = {
   children: ReactNode;
@@ -210,6 +211,11 @@ export function ProductFrame({
   const [, toggle] = useSidebarState();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const showHeader = Boolean(title || intro || kicker || actions);
+  // Polled (~60s) unread count drives the bell-badge dot. The hook itself
+  // returns 0 when the user is signed-out, so this is safe to call here
+  // even though ProductFrame renders for unauthed routes too (it bounces
+  // them client-side; the hook already declines to poll).
+  const unreadCount = useUnreadCount();
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -295,8 +301,19 @@ export function ProductFrame({
                   >
                     <span className="nav-icon" aria-hidden="true">
                       <Icon />
+                      {link.key === "notifications" && unreadCount > 0 ? (
+                        <span
+                          className="nav-icon-dot"
+                          aria-label={`${unreadCount} unread`}
+                        />
+                      ) : null}
                     </span>
-                    <span className="nav-label">{link.label}</span>
+                    <span className="nav-label">
+                      {link.label}
+                      {link.key === "notifications" && unreadCount > 0 ? (
+                        <span className="nav-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
+                      ) : null}
+                    </span>
                   </Link>
                 );
               })}
