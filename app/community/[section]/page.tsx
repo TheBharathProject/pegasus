@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { notFound, useParams } from "next/navigation";
 import { ProductFrame, CommunityTabs } from "@/components/frames";
@@ -15,6 +16,17 @@ import {
   UserPlusIcon
 } from "@/components/icons";
 import { askTags, communityExperiences } from "@/lib/site-data";
+import {
+  buildAskPayload,
+  buildExperiencePayload,
+  buildRecruiterPayload,
+  buildReferralPayload,
+  buildReviewPayload,
+  createCommunityPost,
+  listCommunityPosts,
+  type CommunitySurface
+} from "@/lib/community";
+import type { ApiCommunityPost } from "@/lib/api-client";
 
 type SectionKey = "reviews" | "experiences" | "referrals" | "ask" | "recruiters";
 
@@ -254,6 +266,50 @@ const emptyRecruiter: RecruiterDraft = {
   hiringLevels: []
 };
 
+// validSurface narrows a route param to the discriminated union the API
+// expects. The notFound() call below catches strays before they reach
+// the listCommunityPosts call, but having this helper at the top means
+// useEffect can short-circuit cleanly without a TS cast.
+function validSurface(s: string): s is CommunitySurface {
+  return (
+    s === "reviews" ||
+    s === "experiences" ||
+    s === "referrals" ||
+    s === "ask" ||
+    s === "recruiters"
+  );
+}
+
+// Client-side search across title + body. The community list is paged
+// at 20 posts so substring search is fine; once we cross a few hundred
+// per surface this should move server-side.
+function filteredPosts(posts: ApiCommunityPost[], q: string): ApiCommunityPost[] {
+  const trimmed = q.trim().toLowerCase();
+  if (!trimmed) return posts;
+  return posts.filter(
+    (p) =>
+      p.title.toLowerCase().includes(trimmed) ||
+      (p.body ?? "").toLowerCase().includes(trimmed)
+  );
+}
+
+// Same shape as the timeline + notification pages — short-form relative
+// time. Older items fall back to a date.
+function fmtRelative(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const seconds = Math.round((Date.now() - d.getTime()) / 1000);
+  if (seconds < 60) return `${seconds}s ago`;
+  const mins = Math.round(seconds / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.round(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
 // ---- Page ----------------------------------------------------------------
 
 export default function CommunitySectionPage() {
@@ -270,11 +326,51 @@ export default function CommunitySectionPage() {
   const [askDraft, setAskDraft] = useState<AskDraft>(emptyAsk);
   const [recruiterDraft, setRecruiterDraft] = useState<RecruiterDraft>(emptyRecruiter);
 
+  // Fetched community posts for THIS surface. Populated on mount + after
+  // every successful create. Empty array == not loaded yet OR genuinely
+  // empty surface; we use loadedOnce to disambiguate for the empty state.
+  const [posts, setPosts] = useState<ApiCommunityPost[]>([]);
+  const [loadedOnce, setLoadedOnce] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3500);
     return () => clearTimeout(t);
   }, [toast]);
+
+  // Fetch posts whenever the surface changes (e.g. nav between
+  // /community/ask and /community/experiences without a full reload).
+  useEffect(() => {
+    if (!validSurface(section)) return;
+    let cancelled = false;
+    setLoadedOnce(false);
+    listCommunityPosts(section as CommunitySurface, { limit: 20 })
+      .then((res) => {
+        if (cancelled) return;
+        setPosts(res.items);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPosts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadedOnce(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [section]);
+
+  const refreshPosts = async () => {
+    if (!validSurface(section)) return;
+    try {
+      const res = await listCommunityPosts(section as CommunitySurface, { limit: 20 });
+      setPosts(res.items);
+    } catch {
+      // Keep prior list; toast already showed success.
+    }
+  };
 
   if (!meta) {
     notFound();
@@ -303,14 +399,41 @@ export default function CommunitySectionPage() {
 
   const closeModal = () => setOpenModal(false);
 
-  const flashSaved = (message: string) => {
-    setOpenModal(false);
-    setToast(message);
+  // Reset all drafts back to their empty state. Called after a successful
+  // post creation so the modal reopens clean next time.
+  const resetDrafts = () => {
     setReviewDraft(emptyReview);
-    setExperienceDraft({ ...emptyExperience, rounds: [{ id: 1, type: "Phone Screen", questions: "", tips: "" }] });
+    setExperienceDraft({
+      ...emptyExperience,
+      rounds: [{ id: 1, type: "Phone Screen", questions: "", tips: "" }]
+    });
     setReferralDraft(emptyReferral);
     setAskDraft(emptyAsk);
     setRecruiterDraft(emptyRecruiter);
+  };
+
+  // submit dispatches to the right surface-specific payload builder, POSTs,
+  // shows a success toast, refetches the list. On error we keep the modal
+  // open so the user can edit and retry — matches the existing UX pattern
+  // in other modals across the app.
+  const submit = async (
+    builder: () => { title: string; body?: string; metadata: Record<string, unknown>; isPublic: boolean },
+    successMessage: string
+  ) => {
+    if (submitting || !validSurface(section)) return;
+    setSubmitting(true);
+    try {
+      const payload = builder();
+      await createCommunityPost(section as CommunitySurface, payload);
+      setOpenModal(false);
+      resetDrafts();
+      setToast(successMessage);
+      void refreshPosts();
+    } catch (e) {
+      window.alert(`Could not post: ${(e as Error).message}`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -359,93 +482,40 @@ export default function CommunitySectionPage() {
         </div>
       ) : null}
 
-      {section === "experiences" ? (
-        filteredExperiences.length > 0 ? (
-          <div className="stack" style={{ marginTop: 16 }}>
-            {filteredExperiences.map((experience) => (
-              <article className="experience-row" key={experience.id}>
-                <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                  <span
-                    aria-hidden
-                    style={{
-                      display: "grid",
-                      placeItems: "center",
-                      width: 36,
-                      height: 36,
-                      borderRadius: 8,
-                      background: "var(--surface-2)",
-                      color: "var(--text)",
-                      fontFamily: "var(--font-serif-stack)",
-                      fontSize: 14,
-                      flexShrink: 0,
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,.06)"
-                    }}
-                  >
-                    {experience.company.charAt(0)}
-                  </span>
-                  <div>
-                    <strong>
-                      {experience.company} · {experience.role}
-                    </strong>
-                    <div className="data-title">
-                      {experience.author} · {experience.location} · {experience.roundCount} rounds
-                    </div>
-                  </div>
+      {/* Real posts fetched from /community/{surface}. Until 3b lands in
+          prod the list will be empty, in which case we show the
+          surface-specific empty state (CommunityEmpty). */}
+      {!loadedOnce ? (
+        <p className="muted small" style={{ marginTop: 24 }}>Loading…</p>
+      ) : filteredPosts(posts, search).length > 0 ? (
+        <ul className="post-list">
+          {filteredPosts(posts, search).map((post) => (
+            <li key={post.id}>
+              <Link className="post-row" href={`/community/posts/${post.id}`}>
+                <div className="post-row-body">
+                  <h3 className="post-row-title">{post.title}</h3>
+                  {post.body ? (
+                    <p className="post-row-preview">
+                      {post.body.length > 200 ? post.body.slice(0, 200) + "…" : post.body}
+                    </p>
+                  ) : null}
+                  <p className="post-row-meta">
+                    <span>{post.authorName || "Anonymous"}</span>
+                    <span aria-hidden>·</span>
+                    <span>{fmtRelative(post.createdAt)}</span>
+                    <span aria-hidden>·</span>
+                    <span>↑ {post.voteCount}</span>
+                    <span aria-hidden>·</span>
+                    <span>{post.commentCount} {post.commentCount === 1 ? "reply" : "replies"}</span>
+                  </p>
                 </div>
-                <div className="pill-row" style={{ marginTop: 0 }}>
-                  <span className="pill">{experience.difficulty}</span>
-                  <span
-                    className={
-                      experience.outcome.toLowerCase() === "offer"
-                        ? "pill tone-stage-offer"
-                        : "pill"
-                    }
-                  >
-                    {experience.outcome}
-                  </span>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <CommunityEmpty section={section} meta={meta} onCta={() => setOpenModal(true)} />
-        )
-      ) : null}
-
-      {section === "recruiters" ? (
-        filteredRecruiters.length > 0 ? (
-          <div className="recruiter-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Recruiter</th>
-                  <th>Title</th>
-                  <th>Company</th>
-                  <th>Reviews</th>
-                  <th>Upvotes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRecruiters.map((r) => (
-                  <tr key={`${r.recruiter}-${r.company}`}>
-                    <td>{r.recruiter}</td>
-                    <td className="num">{r.title}</td>
-                    <td>{r.company}</td>
-                    <td className="num">{r.reviews}</td>
-                    <td className="num">↑ {r.upvotes}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <CommunityEmpty section={section} meta={meta} onCta={() => setOpenModal(true)} />
-        )
-      ) : null}
-
-      {section === "ask" || section === "referrals" || section === "reviews" ? (
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
         <CommunityEmpty section={section} meta={meta} onCta={() => setOpenModal(true)} />
-      ) : null}
+      )}
 
       {/* ---- Modals ---- */}
       {openModal && section === "reviews" ? (
@@ -453,7 +523,7 @@ export default function CommunitySectionPage() {
           draft={reviewDraft}
           setDraft={setReviewDraft}
           onClose={closeModal}
-          onSubmit={() => flashSaved("Resume submitted for review · backend wiring coming soon")}
+          onSubmit={() => submit(() => buildReviewPayload(reviewDraft), "Resume submitted for review")}
         />
       ) : null}
 
@@ -462,7 +532,7 @@ export default function CommunitySectionPage() {
           draft={experienceDraft}
           setDraft={setExperienceDraft}
           onClose={closeModal}
-          onSubmit={() => flashSaved("Experience published · backend wiring coming soon")}
+          onSubmit={() => submit(() => buildExperiencePayload(experienceDraft), "Experience published")}
         />
       ) : null}
 
@@ -471,7 +541,7 @@ export default function CommunitySectionPage() {
           draft={referralDraft}
           setDraft={setReferralDraft}
           onClose={closeModal}
-          onSubmit={() => flashSaved("Referral posted · backend wiring coming soon")}
+          onSubmit={() => submit(() => buildReferralPayload(referralDraft), "Referral posted")}
         />
       ) : null}
 
@@ -480,7 +550,7 @@ export default function CommunitySectionPage() {
           draft={askDraft}
           setDraft={setAskDraft}
           onClose={closeModal}
-          onSubmit={() => flashSaved("Question posted · backend wiring coming soon")}
+          onSubmit={() => submit(() => buildAskPayload(askDraft), "Question posted")}
         />
       ) : null}
 
@@ -489,7 +559,7 @@ export default function CommunitySectionPage() {
           draft={recruiterDraft}
           setDraft={setRecruiterDraft}
           onClose={closeModal}
-          onSubmit={() => flashSaved("Recruiter added · backend wiring coming soon")}
+          onSubmit={() => submit(() => buildRecruiterPayload(recruiterDraft), "Recruiter added")}
         />
       ) : null}
 

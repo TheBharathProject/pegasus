@@ -100,6 +100,10 @@ export function notificationVerb(n: ApiNotification): string {
       return "Approaching deadline";
     case "community_reply":
       return "New reply";
+    case "community_vote":
+      return "Someone upvoted you";
+    case "community_mention":
+      return "You were mentioned";
     case "digest":
       return "Daily digest";
     default:

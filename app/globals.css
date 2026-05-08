@@ -3526,6 +3526,250 @@ html[data-sb="collapsed"] .signout-icon {
   flex-shrink: 0;
 }
 
+/* COMMUNITY — list of posts on a section page (/community/<surface>) */
+.post-list {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+
+.post-list > li {
+  border-bottom: 1px solid var(--border);
+}
+
+.post-row {
+  display: block;
+  padding: 18px 4px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 160ms ease, padding-left 160ms ease;
+}
+
+.post-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+  padding-left: 8px;
+}
+
+[data-theme="light"] .post-row:hover {
+  background: rgba(0, 0, 0, 0.025);
+}
+
+.post-row-title {
+  font-family: var(--font-serif-stack);
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 0;
+  font-weight: 400;
+}
+
+.post-row-preview {
+  margin-top: 6px;
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  color: var(--text-soft);
+  font-size: 13.5px;
+  line-height: 1.55;
+  max-width: 780px;
+}
+
+.post-row-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+/* Post detail page (/community/posts/<id>) */
+.post-detail {
+  margin-top: 12px;
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-soft);
+}
+
+.post-detail-body {
+  font-family: var(--font-serif-stack);
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--text);
+  margin: 0 0 18px;
+  white-space: pre-wrap;
+}
+
+.post-meta-pills {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.post-meta-pills > li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 12px;
+}
+
+.post-meta-pill-label {
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+}
+
+.post-meta-pill-value {
+  color: var(--text);
+}
+
+.post-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.vote-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease;
+}
+
+.vote-button:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.vote-button.is-active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.vote-button.is-active:hover {
+  color: var(--bg);
+}
+
+.vote-button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+/* Comments + composer */
+.post-comments {
+  margin-top: 32px;
+}
+
+.post-comments h2 {
+  font-family: var(--font-serif-stack);
+  font-size: 22px;
+  letter-spacing: -0.012em;
+  color: var(--text);
+  font-weight: 400;
+  margin: 0 0 12px;
+}
+
+.comment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+
+.comment-row {
+  position: relative;
+  padding: 16px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.comment-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.comment-head strong {
+  color: var(--text);
+  font-family: var(--font-serif-stack);
+  font-weight: 400;
+  font-size: 14px;
+}
+
+.comment-body {
+  font-family: var(--font-serif-stack);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.comment-body--removed {
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.comment-delete {
+  font-size: 11px;
+  margin-top: 8px;
+}
+
+.comment-composer {
+  margin-top: 22px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-soft);
+}
+
+.comment-composer textarea {
+  width: 100%;
+  min-height: 70px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  outline: none;
+}
+
+.comment-composer textarea:focus {
+  border-color: var(--rule-high);
+}
+
+.post-back {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-decoration: none;
+}
+
+.post-back:hover {
+  color: var(--text);
+}
+
 /* Selected ask-tag pill (used in the Ask modal tag picker) */
 .pill.is-active {
   background: var(--text);

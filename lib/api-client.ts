@@ -281,6 +281,47 @@ export type ApiNotificationListResponse = {
   nextCursor: string | null;
 };
 
+// Community (Phase 3). Single-table model — surface field discriminates,
+// metadata holds per-surface fields as opaque JSON.
+export type ApiCommunityPost = {
+  id: string;
+  userId: string;
+  authorName: string;
+  authorSlug?: string;
+  surface: "reviews" | "experiences" | "referrals" | "ask" | "recruiters";
+  title: string;
+  body?: string;
+  metadata: Record<string, unknown>;
+  isPublic: boolean;
+  voteCount: number;
+  commentCount: number;
+  status: "active" | "removed" | "flagged";
+  myVote: -1 | 0 | 1;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ApiCommunityListResponse = {
+  items: ApiCommunityPost[];
+  nextCursor: string | null;
+};
+
+export type ApiCommunityComment = {
+  id: string;
+  postId: string;
+  userId: string;
+  authorName: string;
+  authorSlug?: string;
+  parentId?: string;
+  body: string;
+  status: "active" | "removed" | "flagged";
+  createdAt: string;
+};
+
+export type ApiCommunityCommentListResponse = {
+  items: ApiCommunityComment[];
+};
+
 export type ApiCoverLettersResponse = {
   coverLetters: ApiFile[];
   count: number;
