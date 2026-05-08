@@ -13,6 +13,13 @@ import {
 import { api, type ApiUser, type ApiProfile } from "@/lib/api-client";
 import { isAuthed, clearToken } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
+import {
+  getStoredTheme,
+  resolveTheme,
+  setStoredTheme,
+  watchSystemTheme,
+  type ThemePref
+} from "@/lib/theme";
 
 const THEMES = [
   { key: "system", label: "System", caption: "Follows your OS", Icon: MonitorIcon },
@@ -28,7 +35,34 @@ type AIUsage = {
 };
 
 export default function SettingsPage() {
-  const [theme, setTheme] = useState<string>("system");
+  const [theme, setThemeState] = useState<ThemePref>("system");
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("dark");
+
+  // Read the stored choice + resolved value once on mount. Boot script in
+  // app/layout.tsx already applied the theme before paint; this just brings
+  // the React state into sync.
+  useEffect(() => {
+    const pref = getStoredTheme();
+    setThemeState(pref);
+    setResolvedTheme(resolveTheme(pref));
+  }, []);
+
+  // While "system" is selected, follow OS changes live.
+  useEffect(() => {
+    if (theme !== "system") return;
+    return watchSystemTheme(() => {
+      const r = resolveTheme("system");
+      setResolvedTheme(r);
+      // Re-apply via setStoredTheme so data-theme attr matches.
+      setStoredTheme("system");
+    });
+  }, [theme]);
+
+  const handleThemeChoice = (key: ThemePref) => {
+    setThemeState(key);
+    setStoredTheme(key);
+    setResolvedTheme(resolveTheme(key));
+  };
   const [user, setUser] = useState<ApiUser | null>(null);
   const [profile, setProfile] = useState<ApiProfile | null>(null);
   const [usage, setUsage] = useState<AIUsage | null>(null);
@@ -156,15 +190,15 @@ export default function SettingsPage() {
         <article className="settings-section">
           <h2>Appearance</h2>
           <p className="muted small">
-            Currently showing <strong style={{ color: "#ececea" }}>{theme === "system" ? "dark" : theme}</strong>{" "}
-            (matched from your system).
+            Currently showing <strong style={{ color: "var(--text)" }}>{resolvedTheme}</strong>
+            {theme === "system" ? " (matched from your system)" : ""}.
           </p>
           <div className="theme-grid">
             {THEMES.map(({ key, label, caption, Icon }) => (
               <button
                 key={key}
                 className={theme === key ? "theme-option active" : "theme-option"}
-                onClick={() => setTheme(key)}
+                onClick={() => handleThemeChoice(key as ThemePref)}
                 type="button"
               >
                 <span className="theme-icon">
