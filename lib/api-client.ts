@@ -110,6 +110,18 @@ export type ApiUser = {
   emailNotificationsEnabled: boolean;
 };
 
+// Browser-extension token row. Plaintext is only available immediately
+// after issuance (POST /me/api-token returns it once); the listing
+// endpoint and every subsequent fetch carries only the prefix + meta.
+export type ApiAPIToken = {
+  id: string;
+  prefix: string;
+  label?: string;
+  createdAt: string;
+  lastUsedAt?: string;
+  revokedAt?: string;
+};
+
 export type ApiStageChange = {
   from?: string;        // empty/missing on the initial "added" entry
   to: string;

@@ -10,7 +10,7 @@ import {
   SettingsIcon,
   SunIcon
 } from "@/components/icons";
-import { api, type ApiUser, type ApiProfile } from "@/lib/api-client";
+import { api, type ApiUser, type ApiProfile, type ApiAPIToken } from "@/lib/api-client";
 import { isAuthed, clearToken } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 import {
@@ -69,6 +69,14 @@ export default function SettingsPage() {
   const [feedback, setFeedback] = useState("");
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [tokenLabel, setTokenLabel] = useState("");
+  const [apiTokens, setApiTokens] = useState<ApiAPIToken[]>([]);
+  const [tokensBusy, setTokensBusy] = useState(false);
+  // Detected by reading <html data-pegasus-extension="1">, set by the
+  // extension's pegasus_bridge content script. Lets us show "Send to
+  // extension" instead of forcing copy/paste.
+  const [extensionInstalled, setExtensionInstalled] = useState(false);
+  const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent" | "failed">("idle");
   const [showCancel, setShowCancel] = useState(false);
   const [showFeedbackOk, setShowFeedbackOk] = useState(false);
 
@@ -102,6 +110,21 @@ export default function SettingsPage() {
       })
       .catch(() => {});
     api.get<AIUsage>("/job-tracker/ai/usage").then(setUsage).catch(() => {});
+    api.get<ApiAPIToken[]>("/job-tracker/me/api-tokens").then(setApiTokens).catch(() => {});
+
+    // Detect the extension. The content script runs at document_start
+    // and stamps the marker before React mounts, so a single read is
+    // enough — no polling needed. Re-check once after a tick anyway in
+    // case the extension is enabled mid-session.
+    const detect = () => {
+      setExtensionInstalled(
+        typeof document !== "undefined" &&
+          document.documentElement.dataset.pegasusExtension === "1"
+      );
+    };
+    detect();
+    const t = setTimeout(detect, 200);
+    return () => clearTimeout(t);
   }, []);
 
   const profileUrl = profile?.slug ? `sypher.in/u/${profile.slug}` : "(set a slug below)";
@@ -117,12 +140,88 @@ export default function SettingsPage() {
     );
   };
 
-  const handleGenerateToken = async () => {
+  const refreshTokens = async () => {
     try {
-      const resp = await api.post<{ token: string }>("/job-tracker/me/api-token", {});
+      const list = await api.get<ApiAPIToken[]>("/job-tracker/me/api-tokens");
+      setApiTokens(list);
+    } catch {
+      // List failures don't need to surface — the next page load will retry.
+    }
+  };
+
+  const handleGenerateToken = async () => {
+    if (tokensBusy) return;
+    const label = tokenLabel.trim();
+    if (!label) {
+      window.alert("Give the token a label (e.g. 'Chrome on laptop') so you can find it later.");
+      return;
+    }
+    setTokensBusy(true);
+    setSendStatus("idle");
+    try {
+      const resp = await api.post<{ token: string }>("/job-tracker/me/api-token", { label });
       setToken(resp.token);
+      setTokenLabel("");
+      await refreshTokens();
+      // If the extension is detected, push the token straight in. The
+      // user still sees the reveal pane briefly so they know it landed,
+      // and the pane auto-closes on success.
+      if (extensionInstalled) {
+        handleSendTokenToExtension(resp.token);
+      }
     } catch (e) {
       window.alert(`Could not generate token: ${(e as Error).message}`);
+    } finally {
+      setTokensBusy(false);
+    }
+  };
+
+  const handleSendTokenToExtension = (plain: string) => {
+    if (!extensionInstalled) return;
+    setSendStatus("sending");
+
+    // One-shot listener — the bridge posts back a result with the same
+    // origin. We strip the listener whether it succeeds or times out so
+    // a future generate-token cycle starts clean.
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== window) return;
+      const data = event.data as { type?: string; ok?: boolean } | null;
+      if (!data || data.type !== "pegasus:set-token-result") return;
+      window.removeEventListener("message", onMessage);
+      clearTimeout(timeoutId);
+      setSendStatus(data.ok ? "sent" : "failed");
+      if (data.ok) {
+        // The token is now in the extension; user no longer needs the
+        // plaintext shown. Auto-collapse the reveal pane after a beat
+        // so the success message has time to register.
+        setTimeout(() => {
+          setToken(null);
+          setSendStatus("idle");
+        }, 1800);
+      }
+    };
+    const timeoutId = setTimeout(() => {
+      window.removeEventListener("message", onMessage);
+      setSendStatus("failed");
+    }, 3000);
+
+    window.addEventListener("message", onMessage);
+    window.postMessage({ type: "pegasus:set-token", token: plain }, window.location.origin);
+  };
+
+  const handleRevokeToken = async (id: string, label?: string) => {
+    const ok = window.confirm(
+      `Revoke ${label ? `"${label}"` : "this token"}? Any browser using it will be signed out immediately.`
+    );
+    if (!ok) return;
+    setTokensBusy(true);
+    try {
+      await api.delete(`/job-tracker/me/api-tokens/${id}`);
+      await refreshTokens();
+    } catch (e) {
+      window.alert(`Revoke failed: ${(e as Error).message}`);
+    } finally {
+      setTokensBusy(false);
     }
   };
 
@@ -464,24 +563,148 @@ export default function SettingsPage() {
         </article>
 
         <article className="settings-section">
-          <h2>Chrome Extension</h2>
+          <h2>Browser extension</h2>
           <p className="muted small">
-            Save jobs from LinkedIn, Indeed, Naukri, or any careers page with one click. Generate a
-            token below and paste it into the extension.
+            Save jobs from LinkedIn, Indeed, Naukri, or any careers page with one click. Each
+            browser you install the extension on needs its own token. Tokens never expire — revoke
+            one to sign that browser out.
           </p>
-          <div className="section-actions">
-            <button className="primary-button" type="button" onClick={handleGenerateToken}>
-              Generate Extension Token
-            </button>
-          </div>
+          {extensionInstalled ? (
+            <p className="extension-detected small">
+              <span className="extension-detected-dot" /> Extension detected in this browser —
+              new tokens will be handed off automatically.
+            </p>
+          ) : null}
+
           {token ? (
-            <div className="billing-row" style={{ marginTop: 16 }}>
-              <code style={{ fontSize: 13, color: "#ececea", wordBreak: "break-all" }}>{token}</code>
-              <button className="ghost-button" type="button" onClick={() => handleCopy(token)}>
-                {copyStatus ?? "Copy"}
-              </button>
+            <div className="token-reveal">
+              <p className="eyebrow">
+                {sendStatus === "sent"
+                  ? "Sent to extension"
+                  : sendStatus === "sending"
+                  ? "Handing off to extension…"
+                  : "Token created"}
+              </p>
+              <p className="token-reveal-copy">
+                {sendStatus === "sent"
+                  ? "The extension has the token. Open its side panel — you should be signed in."
+                  : extensionInstalled
+                  ? "We're dropping this straight into your extension. If anything goes wrong, you can copy it manually below."
+                  : "Copy this now — for your security we won't show it again. Paste it into the extension's Connect screen."}
+              </p>
+              <div className="token-reveal-row">
+                <code className="token-reveal-value">{token}</code>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => handleCopy(token)}
+                >
+                  {copyStatus ?? "Copy"}
+                </button>
+              </div>
+              <div
+                style={{
+                  marginTop: 10,
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  alignItems: "center"
+                }}
+              >
+                {extensionInstalled && sendStatus !== "sent" ? (
+                  <button
+                    className="primary-button"
+                    type="button"
+                    onClick={() => handleSendTokenToExtension(token)}
+                    disabled={sendStatus === "sending"}
+                  >
+                    {sendStatus === "sending" ? "Sending…" :
+                     sendStatus === "failed" ? "Retry send" :
+                     "Send to extension"}
+                  </button>
+                ) : null}
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => {
+                    setToken(null);
+                    setSendStatus("idle");
+                  }}
+                >
+                  {sendStatus === "sent" ? "Close" : "Done — I've copied it"}
+                </button>
+                {sendStatus === "failed" ? (
+                  <span className="muted small">
+                    Send didn't reach the extension — copy/paste still works.
+                  </span>
+                ) : null}
+              </div>
             </div>
           ) : null}
+
+          <div className="token-form" style={{ marginTop: token ? 18 : 12 }}>
+            <input
+              type="text"
+              className="token-label-input"
+              placeholder="Token label, e.g. 'Chrome on laptop'"
+              value={tokenLabel}
+              onChange={(e) => setTokenLabel(e.target.value.slice(0, 80))}
+              disabled={tokensBusy}
+            />
+            <button
+              className="primary-button"
+              type="button"
+              onClick={handleGenerateToken}
+              disabled={tokensBusy || !tokenLabel.trim()}
+            >
+              {tokensBusy ? "Generating…" : "Generate token"}
+            </button>
+          </div>
+
+          {apiTokens.length === 0 ? (
+            <p className="muted small" style={{ marginTop: 14 }}>
+              No tokens yet. Generate one and paste it into the extension.
+            </p>
+          ) : (
+            <ul className="token-list" style={{ marginTop: 14 }}>
+              {apiTokens.map((t) => {
+                const revoked = !!t.revokedAt;
+                return (
+                  <li
+                    key={t.id}
+                    className={revoked ? "token-row is-revoked" : "token-row"}
+                  >
+                    <div className="token-row-main">
+                      <span className="token-row-label">
+                        {t.label || "(unnamed)"}
+                      </span>
+                      <span className="token-row-meta">
+                        <code>{t.prefix}…</code>
+                        <span> · created {t.createdAt.slice(0, 10)}</span>
+                        {t.lastUsedAt ? (
+                          <span> · last used {t.lastUsedAt.slice(0, 10)}</span>
+                        ) : (
+                          <span> · never used</span>
+                        )}
+                      </span>
+                    </div>
+                    {revoked ? (
+                      <span className="token-row-tag">Revoked</span>
+                    ) : (
+                      <button
+                        className="ghost-button token-row-revoke"
+                        type="button"
+                        onClick={() => handleRevokeToken(t.id, t.label)}
+                        disabled={tokensBusy}
+                      >
+                        Revoke
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </article>
 
         <article className="settings-section">
