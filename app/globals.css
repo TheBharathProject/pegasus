@@ -3192,16 +3192,20 @@ html[data-sb="collapsed"] .signout-icon {
   }
 }
 
+/* Asymmetric grid — Premium+ takes 1.3fr so it visually dominates
+   without breaking the rhythm of the row. The two flanking cards
+   are equal-width (1fr) so they balance left↔right around it. */
 .upgrade-plans {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr 1.3fr 1fr;
   gap: 14px;
-  margin-top: 14px;
+  margin-top: 18px;
+  align-items: stretch;
 }
 
 @media (max-width: 900px) {
   .upgrade-plans {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -3211,31 +3215,102 @@ html[data-sb="collapsed"] .signout-icon {
   }
 }
 
-/* Premium+ plan — visually anchored as the recommended option.
-   Soft amber accent on the card border + a small "best value"
-   ribbon. Mirrors the upgrade-credit.is-best treatment downstream
-   so the page reads as one design system. */
+/* Per-card eyebrow override — the global .eyebrow has 0.32em
+   letter-spacing which wraps these short labels onto two lines.
+   Tighter spacing keeps each plan label on a single line. */
+.upgrade-plan-eyebrow {
+  letter-spacing: 0.18em;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.upgrade-plan-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Premium+ plan — anchored as the recommended option. Layered
+   gradient (corner glow + radial top-edge wash) gives the card
+   real depth without being loud. Top padding is bumped so the
+   floating "Recommended" badge has comfortable headroom. */
 .upgrade-plan--plus {
   position: relative;
+  padding-top: 30px;
   border-color: var(--text-soft);
   background:
-    linear-gradient(135deg, rgba(214, 160, 74, 0.08), rgba(214, 160, 74, 0) 60%),
+    radial-gradient(80% 60% at 50% 0%, rgba(214, 160, 74, 0.12), rgba(214, 160, 74, 0) 70%),
+    linear-gradient(160deg, rgba(214, 160, 74, 0.06), rgba(214, 160, 74, 0) 55%),
     var(--bg-soft);
+  box-shadow: 0 0 0 1px rgba(214, 160, 74, 0.08), 0 12px 32px rgba(0, 0, 0, 0.25);
 }
 
 .upgrade-plan-badge {
   position: absolute;
-  top: -10px;
-  right: 18px;
-  padding: 3px 10px;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 14px;
   border-radius: 999px;
-  background: var(--text);
-  color: var(--bg);
+  background: linear-gradient(180deg, #f4d489, #d6a04a);
+  color: #1a1208;
   font-family: var(--font-sans-stack);
   font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: 0.18em;
+  font-weight: 600;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(214, 160, 74, 0.28);
+}
+
+/* Bonus anchor — the "+200 credits" block. Tabular-nums serif
+   numeric mirrors the credits-balance treatment on /settings.
+   A hairline rule above visually separates it from the price. */
+.upgrade-plan-bonus {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(214, 160, 74, 0.3);
+}
+
+.upgrade-plan-bonus-num {
+  font-family: var(--font-serif-stack);
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #d6a04a;
+  font-variant-numeric: tabular-nums;
+}
+
+.upgrade-plan-bonus-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.upgrade-plan-bonus-label {
+  margin: 0;
+  font-family: var(--font-sans-stack);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.upgrade-plan-bonus-sub {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.upgrade-plan-bonus-sub em {
+  font-style: italic;
 }
 
 .upgrade-plan-copy em {

@@ -295,18 +295,19 @@ export default function UpgradePage() {
             </p>
             <div className="upgrade-plans">
               <article className="upgrade-plan">
-                <header>
-                  <p className="eyebrow">Monthly · auto-renew</p>
+                <header className="upgrade-plan-head">
+                  <p className="eyebrow upgrade-plan-eyebrow">Premium</p>
                   <h3>
                     <span className="upgrade-price">₹99</span>
                     <span className="upgrade-price-suffix">/mo</span>
                   </h3>
                 </header>
                 <p className="upgrade-plan-copy">
-                  Cancel anytime from Settings. Renews via UPI Autopay or eMandate.
+                  Auto-renews via UPI Autopay or eMandate. Cancel anytime from
+                  Settings.
                 </p>
                 <button
-                  className="primary-button upgrade-cta"
+                  className="ghost-button upgrade-cta"
                   type="button"
                   onClick={checkoutMonthly}
                   disabled={busy !== null || onRecurring}
@@ -317,17 +318,29 @@ export default function UpgradePage() {
                 </button>
               </article>
               <article className="upgrade-plan upgrade-plan--plus">
-                <span className="upgrade-plan-badge">Best value</span>
-                <header>
-                  <p className="eyebrow">Premium+ · auto-renew</p>
+                <span className="upgrade-plan-badge">Recommended</span>
+                <header className="upgrade-plan-head">
+                  <p className="eyebrow upgrade-plan-eyebrow">Premium+</p>
                   <h3>
                     <span className="upgrade-price">₹299</span>
                     <span className="upgrade-price-suffix">/mo</span>
                   </h3>
                 </header>
+                {/* Credit-bonus anchor — the differentiator that earns
+                    the price gap. Tabular serif numeric mirrors the
+                    /settings credits balance treatment. */}
+                <div className="upgrade-plan-bonus">
+                  <span className="upgrade-plan-bonus-num">+200</span>
+                  <div className="upgrade-plan-bonus-meta">
+                    <p className="upgrade-plan-bonus-label">AI credits</p>
+                    <p className="upgrade-plan-bonus-sub">
+                      <em>dropped each cycle</em>
+                    </p>
+                  </div>
+                </div>
                 <p className="upgrade-plan-copy">
-                  Everything in Premium, plus <em>200 credits</em> dropped into your
-                  balance each cycle.
+                  Everything in Premium, plus a fresh credit grant on every
+                  renewal — never run out mid-month.
                 </p>
                 <button
                   className="primary-button upgrade-cta"
@@ -336,13 +349,13 @@ export default function UpgradePage() {
                   disabled={busy !== null}
                 >
                   {busy === "plus" ? "Opening checkout…" : (
-                    <>Subscribe <ArrowRightIcon width={13} height={13} /></>
+                    <>Subscribe to Premium+ <ArrowRightIcon width={13} height={13} /></>
                   )}
                 </button>
               </article>
               <article className="upgrade-plan">
-                <header>
-                  <p className="eyebrow">30-day pass · one-time</p>
+                <header className="upgrade-plan-head">
+                  <p className="eyebrow upgrade-plan-eyebrow">30-day pass</p>
                   <h3>
                     <span className="upgrade-price">₹99</span>
                     <span className="upgrade-price-suffix">once</span>
