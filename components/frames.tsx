@@ -349,11 +349,34 @@ function SidebarUser() {
   if (loading || !authed || !user) {
     return null;
   }
-  // Clicks navigate to /profile (per user request). Sign-out lives in
-  // Settings and on the marketing top-bar.
+  // Avatar: use the Google profile photo when available, fall back to
+  // the user's initials on a hairline-bordered tile when not. The dot
+  // placeholder we used previously was a leftover from when the auth
+  // payload didn't carry pictureUrl — it does now.
+  const initials = user.name
+    ? user.name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((s) => s[0]?.toUpperCase() ?? "")
+        .join("")
+    : (user.email?.[0]?.toUpperCase() ?? "·");
+
   return (
     <Link className="sidebar-user" href="/profile" aria-label="Open your profile">
-      <span className="avatar-dot" />
+      {user.pictureUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="sidebar-user-avatar"
+          src={user.pictureUrl}
+          alt=""
+          referrerPolicy="no-referrer"
+          width={32}
+          height={32}
+        />
+      ) : (
+        <span className="sidebar-user-avatar sidebar-user-avatar--initials">{initials}</span>
+      )}
       <div className="sidebar-user-copy">
         <strong>{user.name}</strong>
         <span>{user.email}</span>

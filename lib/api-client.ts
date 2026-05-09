@@ -122,6 +122,38 @@ export type ApiAPIToken = {
   revokedAt?: string;
 };
 
+// Razorpay-backed billing snapshot from GET /billing/me. `premium` is
+// null when the user is on the free tier; `creditsBalance` is always
+// present (zero for new users). recentActivity merges sub events +
+// credit transactions in created_at order.
+export type ApiBillingPremium = {
+  id: string;
+  kind: "recurring" | "one_time";
+  // planTier discriminates pricing within recurring:
+  //   "standard" — ₹99/mo, premium only
+  //   "plus"     — ₹299/mo, premium + 200 credits granted per charge
+  // One-time rows always carry "standard".
+  planTier: "standard" | "plus";
+  status: "pending" | "active" | "halted" | "cancelled" | "expired";
+  currentPeriodEnd?: string;
+  cancelAtPeriodEnd: boolean;
+  amountPaise: number;
+};
+
+export type ApiBillingActivity = {
+  when: string;
+  kind: "subscription" | "credits";
+  summary: string;
+  amount: number;
+};
+
+export type ApiBillingMe = {
+  premium: ApiBillingPremium | null;
+  creditsBalance: number;
+  recentActivity: ApiBillingActivity[];
+  creditPacks: { id: string; label: string; amountPaise: number; credits: number }[];
+};
+
 export type ApiStageChange = {
   from?: string;        // empty/missing on the initial "added" entry
   to: string;

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ProductFrame } from "@/components/frames";
 import { MetricCard, Pill } from "@/components/ui";
 import { ApplicationTimeline } from "@/components/timeline";
@@ -88,7 +89,29 @@ function fmtRelative(iso: string) {
   return fmtDate(iso);
 }
 
+// Outer wrapper: useSearchParams() bails out of static prerender unless
+// it's read inside a Suspense boundary. The list page is auth-gated and
+// runs entirely client-side, but Next still tries to prerender it during
+// `next build` — the Suspense satisfies that bail-out check. Same
+// pattern as app/auth/callback/page.tsx.
 export default function ApplicationsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ApplicationsInner />
+    </Suspense>
+  );
+}
+
+function ApplicationsInner() {
+  // Router + search params drive the deep-link flow — visiting
+  // /applications?view=<id> (or /applications/<id> via the redirector
+  // at app/applications/[id]/page.tsx) opens the viewing modal for that
+  // row. Closing the modal strips the param so the URL stays clean.
+  // Documented in ADR-0005.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const viewParam = searchParams?.get("view") ?? null;
+
   const [items, setItems] = useState<ApiApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +121,9 @@ export default function ApplicationsPage() {
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<ApiStageChange[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
+  // Toast for "application not found" when ?view=<id> doesn't match a
+  // loaded row after the grace window. Auto-dismisses.
+  const [viewToast, setViewToast] = useState<string | null>(null);
   const [showTip, setShowTip] = useState(true);
   const tweakFileRef = useRef<HTMLInputElement | null>(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -247,7 +273,42 @@ export default function ApplicationsPage() {
   const closeView = () => {
     setViewingId(null);
     setTimeline([]);
+    // Strip ?view= from the URL when the modal closes so the page URL
+    // stays clean and the back button doesn't reopen the modal.
+    if (viewParam) {
+      router.replace("/applications", { scroll: false });
+    }
   };
+
+  // Deep-link effect: when ?view=<id> is set in the URL, find the
+  // matching application in the loaded list and open it in the
+  // viewing modal. If items are still loading, this will retry once
+  // they arrive (effect re-runs on items.length change). After a 1.2s
+  // grace window we give up with a "not found" toast — this handles
+  // an id that's truly missing or doesn't belong to the user.
+  useEffect(() => {
+    if (!viewParam) return;
+    if (viewingId === viewParam) return; // already open
+    if (items.length === 0) {
+      // Items not loaded yet; if loading is done already, the id
+      // must be bogus — show the toast.
+      if (!loading) {
+        setViewToast("Application not found");
+        const t = setTimeout(() => setViewToast(null), 2400);
+        return () => clearTimeout(t);
+      }
+      return;
+    }
+    const match = items.find((a) => a.id === viewParam);
+    if (match) {
+      openView(match);
+    } else {
+      setViewToast("Application not found");
+      const t = setTimeout(() => setViewToast(null), 2400);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewParam, items.length, loading]);
 
   const editFromView = () => {
     const a = viewingApp;
@@ -1068,6 +1129,7 @@ export default function ApplicationsPage() {
         onClose={() => setImportOpen(false)}
         onImported={() => void refresh()}
       />
+      {viewToast ? <div className="page-toast">{viewToast}</div> : null}
     </ProductFrame>
   );
 }

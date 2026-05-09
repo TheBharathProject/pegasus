@@ -1,16 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ProductFrame } from "@/components/frames";
 import {
   CloseIcon,
   GlobeIcon,
+  HistoryIcon,
   MonitorIcon,
   MoonIcon,
   SettingsIcon,
-  SunIcon
+  SparkleStarIcon,
+  SunIcon,
+  TrashIcon
 } from "@/components/icons";
-import { api, type ApiUser, type ApiProfile, type ApiAPIToken } from "@/lib/api-client";
+import { api, type ApiUser, type ApiProfile, type ApiAPIToken, type ApiBillingMe } from "@/lib/api-client";
 import { isAuthed, clearToken } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 import {
@@ -33,6 +37,95 @@ type AIUsage = {
   periodStart: string;
   periodEnd: string;
 };
+
+// renderPremiumHeadline is the bold serif title in the hero — short
+// noun phrase, not a sentence. Date detail moves to the rail stamp.
+function renderPremiumHeadline(p: NonNullable<ApiBillingMe["premium"]>): string {
+  const isPlus = p.planTier === "plus";
+  if (p.cancelAtPeriodEnd) return isPlus ? "Premium+ ending this cycle" : "Ending after this cycle";
+  if (p.kind === "recurring") return isPlus ? "Premium+ monthly subscription" : "Active monthly subscription";
+  return "30-day premium pass";
+}
+
+// renderPremiumTagline is the italic-serif "currently" line — adds
+// connective tissue between the headline and the rail without
+// repeating the date (which the stamp already shows).
+function renderPremiumTagline(p: NonNullable<ApiBillingMe["premium"]>): string {
+  const amount = `₹${Math.round(p.amountPaise / 100)}`;
+  const isPlus = p.planTier === "plus";
+  if (p.cancelAtPeriodEnd) return `${amount} · auto-renew off · keeps premium until period ends`;
+  if (p.kind === "recurring") {
+    return isPlus
+      ? `${amount} per month · 200 credits dropped each cycle · cancel anytime`
+      : `${amount} per month · UPI Autopay or eMandate · cancel anytime`;
+  }
+  return `${amount} once · single 30-day window · top up to extend`;
+}
+
+// dateDay extracts the numeric day from an RFC3339 / ISO date string.
+// Returns "—" for malformed input so the stamp never crashes the UI.
+function dateDay(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  return String(d.getDate()).padStart(2, "0");
+}
+
+// dateMonth returns a 3-letter month label (e.g. "May") rendered as
+// the small caption beneath the day in the calendar-style stamp.
+function dateMonth(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-IN", { month: "short" });
+}
+
+// formatRelative — terse human-relative time string for the
+// "last used" line on extension token rows. Beyond 30 days it falls
+// back to a calendar date so the timeline doesn't lie about freshness.
+function formatRelative(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso.slice(0, 10);
+  const ms = Date.now() - d.getTime();
+  const sec = Math.round(ms / 1000);
+  if (sec < 45) return "just now";
+  const min = Math.round(sec / 60);
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr} hour${hr === 1 ? "" : "s"} ago`;
+  const day = Math.round(hr / 24);
+  if (day < 7) return `${day} day${day === 1 ? "" : "s"} ago`;
+  if (day < 30) {
+    const w = Math.round(day / 7);
+    return `${w} week${w === 1 ? "" : "s"} ago`;
+  }
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// formatActivityDate renders an RFC3339 timestamp as e.g. "9 May 2026".
+// We use English ordering so it reads naturally to the user's eye even
+// when their locale defaults differ.
+function formatActivityDate(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso.slice(0, 10);
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  });
+}
+
+// formatActivityAmount turns the (kind, amount) tuple into a human
+// monetary string. The backend's `amount` is paise for subscriptions
+// and a synthetic delta×100 for credits — for credits we display the
+// delta as a count, for subscriptions the rupee amount.
+function formatActivityAmount(kind: ApiBillingMe["recentActivity"][number]["kind"], amount: number): string {
+  if (kind === "credits") {
+    const delta = Math.round(amount / 100);
+    if (delta > 0) return `+${delta} credits`;
+    return `${delta} credits`;
+  }
+  const rupees = Math.round(amount / 100);
+  return rupees > 0 ? `₹${rupees}` : "—";
+}
 
 export default function SettingsPage() {
   const [theme, setThemeState] = useState<ThemePref>("system");
@@ -72,6 +165,13 @@ export default function SettingsPage() {
   const [tokenLabel, setTokenLabel] = useState("");
   const [apiTokens, setApiTokens] = useState<ApiAPIToken[]>([]);
   const [tokensBusy, setTokensBusy] = useState(false);
+  // Billing snapshot — loaded from GET /billing/me on mount. Null while
+  // loading; the page renders skeleton copy until then.
+  const [billing, setBilling] = useState<ApiBillingMe | null>(null);
+  const [billingBusy, setBillingBusy] = useState(false);
+  // History panel is collapsed by default — clicking the clock icon in
+  // the Billing header expands the recent-activity timeline.
+  const [historyOpen, setHistoryOpen] = useState(false);
   // Detected by reading <html data-pegasus-extension="1">, set by the
   // extension's pegasus_bridge content script. Lets us show "Send to
   // extension" instead of forcing copy/paste.
@@ -111,6 +211,7 @@ export default function SettingsPage() {
       .catch(() => {});
     api.get<AIUsage>("/job-tracker/ai/usage").then(setUsage).catch(() => {});
     api.get<ApiAPIToken[]>("/job-tracker/me/api-tokens").then(setApiTokens).catch(() => {});
+    api.get<ApiBillingMe>("/billing/me").then(setBilling).catch(() => {});
 
     // Detect the extension. The content script runs at document_start
     // and stamps the marker before React mounts, so a single read is
@@ -173,6 +274,43 @@ export default function SettingsPage() {
       window.alert(`Could not generate token: ${(e as Error).message}`);
     } finally {
       setTokensBusy(false);
+    }
+  };
+
+  // /upgrade redirects here with ?billing=<message> after a successful
+  // checkout. The webhook updates state asynchronously so we re-fetch
+  // /billing/me after a short delay to give Razorpay time to deliver.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const msg = url.searchParams.get("billing");
+    if (!msg) return;
+    // Strip the param so a refresh doesn't re-show the toast.
+    url.searchParams.delete("billing");
+    window.history.replaceState({}, "", url.toString());
+    setCopyStatus(msg);
+    setTimeout(() => setCopyStatus(null), 4000);
+    // Webhook usually lands within a second or two; refresh /billing/me
+    // a moment later so the section reflects the new state.
+    setTimeout(() => {
+      api.get<ApiBillingMe>("/billing/me").then(setBilling).catch(() => {});
+    }, 1500);
+  }, []);
+
+  const handleCancelSubscription = async () => {
+    if (!billing?.premium || billing.premium.kind !== "recurring") return;
+    if (!window.confirm(
+      "Cancel auto-renewal? You'll keep premium until the end of your current period."
+    )) return;
+    setBillingBusy(true);
+    try {
+      await api.post(`/billing/subscriptions/${billing.premium.id}/cancel`, {});
+      const fresh = await api.get<ApiBillingMe>("/billing/me");
+      setBilling(fresh);
+    } catch (e) {
+      window.alert(`Cancel failed: ${(e as Error).message}`);
+    } finally {
+      setBillingBusy(false);
     }
   };
 
@@ -437,48 +575,224 @@ export default function SettingsPage() {
                   applications, approaching deadlines, replies on what you posted.
                 </p>
               </div>
-              <a className="primary-button" href="/upgrade">
+              <Link className="primary-button" href="/upgrade">
                 Upgrade
-              </a>
+              </Link>
             </div>
           )}
         </article>
 
-        <article className="settings-section">
-          <h2>Billing</h2>
-          <p className="muted small">AI features are metered. Everything else is free forever.</p>
-          <div className="billing-row">
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span
-                style={{
-                  display: "grid",
-                  placeItems: "center",
-                  width: 32,
-                  height: 32,
-                  borderRadius: 999,
-                  background: "#2c2c2c",
-                  color: "#b3b1ab"
-                }}
-              >
-                <SettingsIcon width={14} height={14} />
-              </span>
-              <div>
-                <strong>Pro plan</strong>
-                <div className="data-title">
-                  {aiUsedDisplay} of {aiLimitDisplay} AI tokens this month
+        <article className="settings-section billing-section">
+          <header className="billing-head">
+            <div>
+              <h2>Billing</h2>
+              <p className="muted small billing-intro">
+                Premium gives you the email layer. Credits power the AI features.
+                Everything else stays free forever.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={historyOpen ? "billing-history-toggle is-open" : "billing-history-toggle"}
+              onClick={() => setHistoryOpen((v) => !v)}
+              aria-expanded={historyOpen}
+              aria-controls="billing-history-panel"
+              title={historyOpen ? "Hide billing history" : "Show billing history"}
+            >
+              <HistoryIcon width={15} height={15} />
+              <span>{historyOpen ? "Hide history" : "History"}</span>
+            </button>
+          </header>
+
+          {/* Premium status — hero card. Asymmetric inner grid:
+              left rail carries the editorial copy (eyebrow + serif title
+              + italic "currently" tagline); right rail is a calendar-
+              style date stamp when there's a renewal, or a CTA when free.
+              Decorative ₹ mark sits behind the title at low opacity. */}
+          <div className={billing?.premium ? "billing-hero is-premium" : "billing-hero"}>
+            <div aria-hidden className="billing-hero-mark">₹</div>
+            <div className="billing-hero-main">
+              <p className="eyebrow">{billing?.premium ? "Pegasus Premium" : "Pegasus Free"}</p>
+              <h3 className="billing-hero-title">
+                {!billing
+                  ? "Loading…"
+                  : billing.premium
+                  ? renderPremiumHeadline(billing.premium)
+                  : "Email digest locked"}
+              </h3>
+              <p className="billing-hero-tagline">
+                <em>currently</em> —{" "}
+                {!billing
+                  ? "fetching your billing details"
+                  : billing.premium
+                  ? renderPremiumTagline(billing.premium)
+                  : "free tier · upgrade for inbox digest + community reply emails"}
+              </p>
+            </div>
+            <aside className="billing-hero-rail">
+              {billing?.premium && billing.premium.currentPeriodEnd ? (
+                <div
+                  className={
+                    billing.premium.cancelAtPeriodEnd
+                      ? "billing-stamp is-ending"
+                      : "billing-stamp"
+                  }
+                >
+                  <p className="billing-stamp-eyebrow">
+                    {billing.premium.cancelAtPeriodEnd
+                      ? "Ends"
+                      : billing.premium.kind === "recurring"
+                      ? "Renews"
+                      : "Expires"}
+                  </p>
+                  <p className="billing-stamp-day">
+                    {dateDay(billing.premium.currentPeriodEnd)}
+                  </p>
+                  <p className="billing-stamp-month">
+                    {dateMonth(billing.premium.currentPeriodEnd)}
+                  </p>
+                  <p className="billing-stamp-meta">
+                    ₹{Math.round(billing.premium.amountPaise / 100)} ·{" "}
+                    {billing.premium.kind === "recurring" ? "Autopay" : "One-time"}
+                  </p>
                 </div>
+              ) : !billing?.premium ? (
+                <Link className="primary-button billing-cta" href="/upgrade">
+                  Upgrade
+                </Link>
+              ) : null}
+              {billing?.premium && billing.premium.kind === "recurring" && !billing.premium.cancelAtPeriodEnd ? (
+                <button
+                  className="billing-link-btn"
+                  type="button"
+                  onClick={handleCancelSubscription}
+                  disabled={billingBusy}
+                >
+                  {billingBusy ? "Cancelling…" : "Cancel auto-renewal"}
+                </button>
+              ) : null}
+            </aside>
+          </div>
+
+          {/* Credits balance — display-typography first.
+              Big serif numeral (tabular) carries visual weight; the
+              token meter beside it shows monthly AI consumption as a
+              hairline progress bar so it reads as one cohesive panel
+              rather than two separate stats stapled together. */}
+          <div className="billing-credits-card">
+            <div className="billing-credits-figure">
+              <span aria-hidden className="billing-credits-spark">
+                <SparkleStarIcon width={14} height={14} />
+              </span>
+              <div className="billing-credits-numeric">
+                <p className="billing-credits-value">
+                  {(billing?.creditsBalance ?? 0).toLocaleString("en-IN")}
+                </p>
+                <p className="billing-credits-label">
+                  <em>credits</em> available
+                </p>
               </div>
             </div>
-            <span className="pill tone-stage-offer">Active</span>
+
+            <div className="billing-tokens">
+              <p className="billing-tokens-eyebrow">AI tokens · this month</p>
+              <div
+                className="billing-tokens-bar"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={usage?.limit ?? 0}
+                aria-valuenow={usage?.used ?? 0}
+              >
+                <span
+                  className="billing-tokens-fill"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.round(((usage?.used ?? 0) / Math.max(1, usage?.limit ?? 1)) * 100)
+                    )}%`
+                  }}
+                />
+              </div>
+              <p className="billing-tokens-caption">
+                <span className="billing-tokens-used">{aiUsedDisplay}</span>
+                <span className="billing-tokens-divider"> / </span>
+                <span className="billing-tokens-limit">{aiLimitDisplay}</span>
+              </p>
+            </div>
+
+            <Link className="ghost-button billing-cta" href="/upgrade#credits">
+              Top up
+            </Link>
           </div>
-          <button
-            className="ghost-button"
-            style={{ marginTop: 18 }}
-            type="button"
-            onClick={() => setShowCancel(true)}
-          >
-            Delete account
-          </button>
+
+          {/* Collapsible history panel */}
+          {historyOpen ? (
+            <section
+              id="billing-history-panel"
+              className="billing-history"
+              aria-label="Billing history"
+            >
+              <p className="eyebrow">History</p>
+              {billing && billing.recentActivity.length > 0 ? (
+                <ol className="billing-timeline">
+                  {billing.recentActivity.map((row, i) => {
+                    const positive = row.kind === "credits" && row.amount > 0;
+                    const negative = row.kind === "credits" && row.amount < 0;
+                    return (
+                      <li
+                        key={i}
+                        className="billing-timeline-item"
+                        style={{ animationDelay: `${Math.min(i, 5) * 60}ms` }}
+                      >
+                        <p className="billing-timeline-stamp">
+                          <span className="billing-timeline-day">
+                            {row.when ? dateDay(row.when) : "—"}
+                          </span>
+                          <span className="billing-timeline-mon">
+                            {row.when ? dateMonth(row.when) : ""}
+                          </span>
+                        </p>
+                        <div className="billing-timeline-body">
+                          <p className="billing-timeline-summary">
+                            <span
+                              aria-hidden
+                              className={
+                                row.kind === "credits"
+                                  ? "billing-timeline-glyph is-credits"
+                                  : "billing-timeline-glyph is-sub"
+                              }
+                            >
+                              {row.kind === "credits" ? "✦" : "◉"}
+                            </span>
+                            {row.summary}
+                          </p>
+                          <p className="billing-timeline-meta">
+                            {row.kind === "credits" ? "Credits" : "Premium"}
+                          </p>
+                        </div>
+                        <p
+                          className={
+                            positive
+                              ? "billing-timeline-amount is-positive"
+                              : negative
+                              ? "billing-timeline-amount is-negative"
+                              : "billing-timeline-amount"
+                          }
+                        >
+                          {formatActivityAmount(row.kind, row.amount)}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : (
+                <p className="muted small">
+                  No transactions yet. Once you upgrade or top up, your activity
+                  appears here.
+                </p>
+              )}
+            </section>
+          ) : null}
         </article>
 
         <article className="settings-section">
@@ -661,50 +975,101 @@ export default function SettingsPage() {
             </button>
           </div>
 
-          {apiTokens.length === 0 ? (
-            <p className="muted small" style={{ marginTop: 14 }}>
-              No tokens yet. Generate one and paste it into the extension.
-            </p>
-          ) : (
-            <ul className="token-list" style={{ marginTop: 14 }}>
-              {apiTokens.map((t) => {
-                const revoked = !!t.revokedAt;
-                return (
-                  <li
-                    key={t.id}
-                    className={revoked ? "token-row is-revoked" : "token-row"}
-                  >
-                    <div className="token-row-main">
-                      <span className="token-row-label">
-                        {t.label || "(unnamed)"}
-                      </span>
-                      <span className="token-row-meta">
-                        <code>{t.prefix}…</code>
-                        <span> · created {t.createdAt.slice(0, 10)}</span>
-                        {t.lastUsedAt ? (
-                          <span> · last used {t.lastUsedAt.slice(0, 10)}</span>
-                        ) : (
-                          <span> · never used</span>
-                        )}
-                      </span>
-                    </div>
-                    {revoked ? (
-                      <span className="token-row-tag">Revoked</span>
-                    ) : (
-                      <button
-                        className="ghost-button token-row-revoke"
-                        type="button"
-                        onClick={() => handleRevokeToken(t.id, t.label)}
-                        disabled={tokensBusy}
+          {(() => {
+            const active = apiTokens.filter((t) => !t.revokedAt);
+            const revoked = apiTokens.filter((t) => !!t.revokedAt);
+            return (
+              <>
+                {/* Active tokens — visible by default. The empty state
+                    leans on serif italic to feel intentional rather
+                    than placeholder-y. */}
+                {active.length === 0 ? (
+                  <p className="ext-token-empty">
+                    <em>No active tokens.</em> Name a browser above and generate one
+                    — it&apos;ll appear here once you&apos;ve connected the extension.
+                  </p>
+                ) : (
+                  <ul className="ext-token-list">
+                    {active.map((t, i) => (
+                      <li
+                        key={t.id}
+                        className="ext-token-row"
+                        style={{ animationDelay: `${Math.min(i, 6) * 50}ms` }}
                       >
-                        Revoke
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                        <p className="ext-token-stamp">
+                          <span className="ext-token-day">{dateDay(t.createdAt)}</span>
+                          <span className="ext-token-mon">{dateMonth(t.createdAt)}</span>
+                        </p>
+                        <div className="ext-token-body">
+                          <p className="ext-token-label">
+                            {t.label?.trim() || "Unnamed token"}
+                          </p>
+                          <p className="ext-token-meta">
+                            <code className="ext-token-prefix">{t.prefix}…</code>
+                            <span aria-hidden className="ext-token-sep">·</span>
+                            <span className="ext-token-when">
+                              {t.lastUsedAt
+                                ? `Last used ${formatRelative(t.lastUsedAt)}`
+                                : "Never used"}
+                            </span>
+                          </p>
+                        </div>
+                        <button
+                          className="ext-token-revoke"
+                          type="button"
+                          onClick={() => handleRevokeToken(t.id, t.label)}
+                          disabled={tokensBusy}
+                        >
+                          Revoke
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* Revoked tokens collapsed under a disclosure — they're
+                    audit trail, not the working set. */}
+                {revoked.length > 0 ? (
+                  <details className="ext-revoked-group">
+                    <summary>
+                      <span>
+                        {revoked.length} revoked token
+                        {revoked.length === 1 ? "" : "s"}
+                      </span>
+                      <span className="ext-revoked-hint">show</span>
+                    </summary>
+                    <ul className="ext-token-list ext-token-list--revoked">
+                      {revoked.map((t) => (
+                        <li
+                          key={t.id}
+                          className="ext-token-row ext-token-row--revoked"
+                        >
+                          <p className="ext-token-stamp">
+                            <span className="ext-token-day">{dateDay(t.createdAt)}</span>
+                            <span className="ext-token-mon">{dateMonth(t.createdAt)}</span>
+                          </p>
+                          <div className="ext-token-body">
+                            <p className="ext-token-label">
+                              {t.label?.trim() || "Unnamed token"}
+                            </p>
+                            <p className="ext-token-meta">
+                              <code className="ext-token-prefix">{t.prefix}…</code>
+                              <span aria-hidden className="ext-token-sep">·</span>
+                              <span className="ext-token-when">
+                                Revoked{" "}
+                                {t.revokedAt ? formatRelative(t.revokedAt) : "earlier"}
+                              </span>
+                            </p>
+                          </div>
+                          <span className="ext-token-tag">Revoked</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+              </>
+            );
+          })()}
         </article>
 
         <article className="settings-section">
@@ -729,6 +1094,25 @@ export default function SettingsPage() {
               Thanks — your note has been sent.
             </p>
           ) : null}
+        </article>
+
+        <article className="settings-section settings-danger">
+          <header className="settings-danger-head">
+            <p className="eyebrow">Danger zone</p>
+            <h2>Delete account</h2>
+          </header>
+          <p className="muted small settings-danger-copy">
+            Permanently removes your applications, notes, resume vault, community
+            posts, billing rows, and identity. This cannot be undone — there&apos;s no
+            grace period and no recovery.
+          </p>
+          <button
+            className="settings-danger-btn"
+            type="button"
+            onClick={() => setShowCancel(true)}
+          >
+            <TrashIcon width={13} height={13} /> Delete my account
+          </button>
         </article>
       </section>
 

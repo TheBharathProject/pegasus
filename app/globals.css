@@ -581,6 +581,33 @@ html[data-sb="collapsed"] .nav-label {
   flex-shrink: 0;
 }
 
+/* Sidebar user avatar — image when Google supplied a pictureUrl,
+   initials tile otherwise. Same outer dimensions as .avatar-dot so
+   the surrounding layout stays stable across both branches. */
+.sidebar-user-avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--text-soft);
+  font-family: var(--font-sans-stack);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  overflow: hidden;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.sidebar-user-avatar--initials {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent 60%), var(--bg-soft);
+}
+
 .sidebar-user-copy {
   display: grid;
   min-width: 0;
@@ -3069,6 +3096,887 @@ html[data-sb="collapsed"] .signout-icon {
   font-style: italic;
 }
 
+/* Upgrade page — premium plans + credit packs (Phase 6b). The two
+   sections share visual rhythm: card grids with eyebrow, big price,
+   short copy, single CTA. */
+.upgrade-section-title {
+  margin-top: 28px;
+  margin-bottom: 4px;
+  font-family: var(--font-serif-stack);
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: -0.012em;
+  color: var(--text);
+}
+
+.upgrade-section-copy {
+  margin-bottom: 14px;
+}
+
+/* "You're already on Premium" banner — replaces the upsell plan cards
+   when /billing/me returns an active subscription. Same calendar-stamp
+   visual language as the Settings billing hero, rendered horizontally
+   to fit the wider /upgrade page rhythm. */
+.upgrade-current-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 28px;
+  padding: 26px 30px;
+  margin-top: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background:
+    radial-gradient(140% 160% at 0% 0%, rgba(214, 160, 74, 0.06), transparent 55%),
+    var(--bg-soft);
+  position: relative;
+}
+
+.upgrade-current-banner::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6dba6d;
+  box-shadow: 0 0 0 4px rgba(109, 186, 109, 0.15);
+}
+
+.upgrade-current-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.upgrade-current-main .eyebrow {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-faint);
+}
+
+.upgrade-current-title {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: -0.018em;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.upgrade-current-sub {
+  margin: 8px 0 0;
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-soft);
+  line-height: 1.55;
+}
+
+.upgrade-current-sub em {
+  color: var(--text);
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+.upgrade-current-cta {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .upgrade-current-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.upgrade-plans {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+@media (max-width: 900px) {
+  .upgrade-plans {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .upgrade-plans {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Premium+ plan — visually anchored as the recommended option.
+   Soft amber accent on the card border + a small "best value"
+   ribbon. Mirrors the upgrade-credit.is-best treatment downstream
+   so the page reads as one design system. */
+.upgrade-plan--plus {
+  position: relative;
+  border-color: var(--text-soft);
+  background:
+    linear-gradient(135deg, rgba(214, 160, 74, 0.08), rgba(214, 160, 74, 0) 60%),
+    var(--bg-soft);
+}
+
+.upgrade-plan-badge {
+  position: absolute;
+  top: -10px;
+  right: 18px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--font-sans-stack);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.upgrade-plan-copy em {
+  color: var(--text);
+  font-style: italic;
+}
+
+.upgrade-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 22px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-soft);
+}
+
+.upgrade-plan header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.upgrade-plan h3 {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-weight: 400;
+  letter-spacing: -0.014em;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.upgrade-price {
+  font-size: 30px;
+}
+
+.upgrade-price-suffix {
+  font-size: 13px;
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.upgrade-plan-copy {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-soft);
+}
+
+.upgrade-cta {
+  align-self: flex-start;
+  margin-top: 6px;
+}
+
+.upgrade-credit-packs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+@media (max-width: 720px) {
+  .upgrade-credit-packs {
+    grid-template-columns: 1fr;
+  }
+}
+
+.upgrade-credit {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px 22px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-soft);
+}
+
+.upgrade-credit.is-best {
+  border-color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.upgrade-credit-badge {
+  position: absolute;
+  top: -10px;
+  right: 16px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.upgrade-credit h3 {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-weight: 400;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text);
+}
+
+.upgrade-credit-count {
+  font-size: 30px;
+  letter-spacing: -0.014em;
+}
+
+.upgrade-credit-suffix {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.upgrade-credit-price {
+  margin: 0;
+  font-family: var(--font-sans-stack);
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.upgrade-error {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 1px solid #4a1f1f;
+  border-radius: 8px;
+  background: #2a1414;
+  color: #d96565;
+  font-size: 12.5px;
+}
+
+/* ============================================================================
+   Settings → Billing card  (Phase 6b · editorial refined-minimal redesign)
+   ============================================================================
+   Aesthetic: financial-magazine restraint — display serif anchors, italic
+   tagline as connective tissue, calendar-style date stamps, hairline
+   rules, tabular-nums for all numbers, an oversized faint ₹ behind the
+   hero as a quiet signature.
+
+   Stagger reveal on mount — head, hero, credits, history land in
+   sequence rather than all at once. Subtle and once-only; doesn't
+   interfere with subsequent state changes.
+*/
+.billing-section {
+  padding-bottom: 26px;
+  font-feature-settings: "tnum" 1;
+}
+
+.billing-section > .billing-head,
+.billing-section > .billing-hero,
+.billing-section > .billing-credits-card,
+.billing-section > .billing-history {
+  animation: billing-rise 420ms cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+}
+
+.billing-section > .billing-head { animation-delay: 0ms; }
+.billing-section > .billing-hero { animation-delay: 90ms; }
+.billing-section > .billing-credits-card { animation-delay: 170ms; }
+.billing-section > .billing-history { animation-delay: 240ms; }
+
+@keyframes billing-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.billing-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.billing-head h2 {
+  margin: 0;
+}
+
+.billing-intro {
+  margin-top: 6px;
+  margin-bottom: 0;
+  max-width: 60ch;
+}
+
+.billing-history-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--text-soft);
+  font-family: var(--font-sans-stack);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.billing-history-toggle:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.billing-history-toggle.is-open {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.billing-history-toggle.is-open svg {
+  transform: rotate(-25deg);
+  transition: transform 280ms ease;
+}
+
+/* Hero card — asymmetric grid: left rail (eyebrow + display title +
+   italic-serif tagline) takes the visual weight; right rail carries
+   either a calendar-style date stamp (renews / expires) or a CTA. The
+   oversized faint ₹ glyph behind the title is the quiet signature
+   element that differentiates this from a generic SaaS card. */
+.billing-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 32px;
+  margin-top: 24px;
+  padding: 28px 28px 26px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-soft);
+  overflow: hidden;
+}
+
+.billing-hero.is-premium {
+  border-color: var(--border-strong);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(214, 160, 74, 0.05), transparent 50%),
+    var(--bg-soft);
+}
+
+/* Decorative rupee glyph — large, faint, positioned to bleed off the
+   top-right of the card. Visual interest without competing with copy. */
+.billing-hero-mark {
+  position: absolute;
+  top: -28px;
+  right: -16px;
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  font-size: 220px;
+  line-height: 1;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.025);
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: -0.04em;
+}
+
+.billing-hero.is-premium .billing-hero-mark {
+  color: rgba(214, 160, 74, 0.06);
+}
+
+.billing-hero-main {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.billing-hero-main .eyebrow {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--text-faint);
+}
+
+.billing-hero-title {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-serif-stack);
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: -0.018em;
+  line-height: 1.15;
+}
+
+.billing-hero-tagline {
+  margin: 12px 0 0;
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-soft);
+  max-width: 56ch;
+}
+
+.billing-hero-tagline em {
+  color: var(--text);
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+/* Right rail — date stamp OR CTA, never both crammed. The cancel link
+   is a quiet text button below the stamp so it doesn't compete. */
+.billing-hero-rail {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+/* Calendar-style stamp — financial-reporting tone. DAY is large,
+   MONTH small below, hairline divider, then meta line in mono caps. */
+.billing-stamp {
+  position: relative;
+  width: 132px;
+  padding: 14px 16px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg);
+  text-align: left;
+}
+
+.billing-stamp.is-ending {
+  border-color: rgba(214, 160, 74, 0.45);
+  background:
+    linear-gradient(180deg, rgba(214, 160, 74, 0.05), transparent 60%),
+    var(--bg);
+}
+
+.billing-stamp-eyebrow {
+  margin: 0 0 4px;
+  font-family: var(--font-sans-stack);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.billing-stamp-day {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-size: 38px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.022em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.billing-stamp-month {
+  margin: 2px 0 0;
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+.billing-stamp-meta {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-sans-stack);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* Quiet text-link button — used for "Cancel auto-renewal" so it
+   doesn't compete with the stamp's visual weight. */
+.billing-link-btn {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  color: var(--text-faint);
+  font-family: var(--font-sans-stack);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.billing-link-btn:hover {
+  color: #d96565;
+  border-bottom-color: #d96565;
+}
+
+.billing-link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.billing-cta {
+  min-width: 132px;
+  justify-content: center;
+}
+
+/* Credits card — display-typography figure on the left, hairline
+   tokens-meter in the middle, CTA on the right. Three-column grid
+   reads left→right as: balance · usage · action. */
+.billing-credits-card {
+  display: grid;
+  grid-template-columns: minmax(140px, auto) minmax(0, 1fr) auto;
+  gap: 32px;
+  align-items: center;
+  margin-top: 14px;
+  padding: 22px 28px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-soft);
+}
+
+.billing-credits-figure {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.billing-credits-spark {
+  align-self: flex-start;
+  margin-top: 8px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(214, 160, 74, 0.1);
+  border: 1px solid rgba(214, 160, 74, 0.22);
+  color: #d6a04a;
+}
+
+.billing-credits-numeric {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.billing-credits-value {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.022em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.billing-credits-label {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-size: 14px;
+  color: var(--text-soft);
+  letter-spacing: 0;
+}
+
+.billing-credits-label em {
+  font-style: italic;
+  color: var(--text);
+}
+
+/* Tokens meter — thin progress bar with eyebrow above and
+   used/limit caption below. Tabular numbers so the count doesn't
+   shift width as it grows. */
+.billing-tokens {
+  min-width: 0;
+}
+
+.billing-tokens-eyebrow {
+  margin: 0 0 8px;
+  font-family: var(--font-sans-stack);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.billing-tokens-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  position: relative;
+}
+
+.billing-tokens-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--text-soft), var(--text));
+  transition: width 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.billing-tokens-caption {
+  margin: 8px 0 0;
+  font-family: var(--font-sans-stack);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+}
+
+.billing-tokens-used {
+  color: var(--text-soft);
+  font-weight: 500;
+}
+
+.billing-tokens-divider {
+  margin: 0 4px;
+  color: var(--text-faint);
+}
+
+.billing-tokens-limit {
+  color: var(--text-faint);
+}
+
+@media (max-width: 720px) {
+  .billing-hero {
+    grid-template-columns: 1fr;
+  }
+  .billing-hero-rail {
+    align-items: flex-start;
+  }
+  .billing-credits-card {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .billing-credits-card .billing-cta {
+    align-self: flex-start;
+  }
+}
+
+/* History panel — collapsed by default, revealed by the toggle.
+   Editorial three-column grid: DATE STAMP | DESCRIPTION | AMOUNT.
+   Items stagger-fade in (delay set inline by index in JSX). */
+.billing-history {
+  margin-top: 24px;
+  padding: 22px 26px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+}
+
+.billing-history .eyebrow {
+  display: block;
+  margin-bottom: 16px;
+  color: var(--text-faint);
+}
+
+.billing-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.billing-timeline-item {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+  animation: billing-timeline-in 380ms cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+}
+
+.billing-timeline-item:first-child {
+  border-top: 0;
+  padding-top: 4px;
+}
+
+@keyframes billing-timeline-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Date stamp — DAY large, MONTH italic-serif beneath. Mirrors the
+   hero's calendar-stamp treatment so the page reads as a system. */
+.billing-timeline-stamp {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1;
+}
+
+.billing-timeline-day {
+  font-family: var(--font-serif-stack);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.018em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.billing-timeline-mon {
+  margin-top: 3px;
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.billing-timeline-body {
+  min-width: 0;
+}
+
+.billing-timeline-summary {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-sans-stack);
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+/* Tiny glyph in front of the summary — replaces a generic dot.
+   ✦ for credits (sparkle/sparkle-y), ◉ for premium (record/active). */
+.billing-timeline-glyph {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.billing-timeline-glyph.is-credits {
+  color: #d6a04a;
+}
+
+.billing-timeline-glyph.is-sub {
+  color: #6dba6d;
+}
+
+.billing-timeline-meta {
+  margin: 4px 0 0 25px; /* aligns with summary text past the glyph */
+  font-family: var(--font-sans-stack);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.billing-timeline-amount {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.billing-timeline-amount.is-positive {
+  color: #93c693;
+}
+
+.billing-timeline-amount.is-negative {
+  color: #d6a04a;
+}
+
+@media (max-width: 540px) {
+  .billing-timeline-item {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 14px;
+  }
+  .billing-timeline-day {
+    font-size: 18px;
+  }
+  .billing-timeline-amount {
+    font-size: 14px;
+  }
+}
+
+/* Danger zone — its own section at the bottom. Red accent, intentionally
+   stark so the user can't conflate it with regular settings. */
+.settings-danger {
+  border-color: rgba(217, 101, 101, 0.22) !important;
+  background: linear-gradient(180deg, rgba(217, 101, 101, 0.025), transparent 65%);
+}
+
+.settings-danger-head {
+  margin-bottom: 10px;
+}
+
+.settings-danger-head .eyebrow {
+  margin-bottom: 6px;
+  color: #d96565;
+}
+
+.settings-danger-head h2 {
+  margin: 0;
+  color: var(--text);
+}
+
+.settings-danger-copy {
+  max-width: 60ch;
+  margin-bottom: 18px;
+}
+
+.settings-danger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: 1px solid rgba(217, 101, 101, 0.4);
+  border-radius: 8px;
+  background: rgba(217, 101, 101, 0.06);
+  color: #d96565;
+  font-family: var(--font-sans-stack);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.settings-danger-btn:hover {
+  background: rgba(217, 101, 101, 0.12);
+  border-color: rgba(217, 101, 101, 0.6);
+  color: #ef7e7e;
+}
+
 /* Upgrade CTA row (free users) — premium feature, locked */
 .email-pref-upgrade {
   display: flex;
@@ -3220,80 +4128,256 @@ html[data-sb="collapsed"] .signout-icon {
   word-break: break-all;
 }
 
-.token-list {
+/* Legacy .token-row classes — superseded by .ext-token-* below.
+   Kept harmlessly empty so any third-party theming overrides don't
+   inadvertently target a non-existent class. Remove later. */
+
+/* ============================================================================
+   Settings → Browser extension token list  (Phase 6 polish)
+   ============================================================================
+   Editorial three-column row matching the billing timeline:
+     [calendar stamp] [label + prefix + last-used meta] [revoke action]
+   Active tokens render up top; revoked tokens collapse under a
+   <details> disclosure since they're audit trail, not working set.
+*/
+.ext-token-list {
   list-style: none;
-  margin: 0;
+  margin: 16px 0 0;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: 0;
+  border-top: 1px solid var(--border);
 }
 
-.token-row {
-  display: flex;
+.ext-token-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: 18px;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-soft);
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  animation: ext-token-in 360ms cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
 }
 
-.token-row.is-revoked {
-  opacity: 0.55;
+@keyframes ext-token-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
 }
 
-.token-row-main {
+/* Calendar stamp — DAY large serif, italic-serif MON below.
+   Matches the billing timeline pattern so the page reads as one
+   coherent system. */
+.ext-token-stamp {
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  align-items: flex-start;
+  line-height: 1;
+}
+
+.ext-token-day {
+  font-family: var(--font-serif-stack);
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: -0.018em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ext-token-mon {
+  margin-top: 3px;
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.ext-token-body {
   min-width: 0;
 }
 
-.token-row-label {
+.ext-token-label {
+  margin: 0;
   font-family: var(--font-sans-stack);
   font-size: 13.5px;
-  color: var(--text);
   font-weight: 500;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.token-row-meta {
+.ext-token-meta {
+  margin: 4px 0 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
   align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-sans-stack);
   font-size: 11.5px;
   color: var(--text-faint);
 }
 
-.token-row-meta code {
-  padding: 1px 6px;
+.ext-token-prefix {
+  padding: 1px 7px;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--bg);
   color: var(--text-soft);
-  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-family: ui-monospace, SFMono-Regular, "Menlo", monospace;
   font-size: 10.5px;
+  letter-spacing: 0.02em;
 }
 
-.token-row-tag {
+.ext-token-sep {
+  color: var(--border-strong);
+  font-size: 11px;
+}
+
+.ext-token-when {
+  font-style: italic;
+  font-family: var(--font-serif-stack);
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+/* Quiet revoke button — shows up only on hover so the row doesn't
+   feel cluttered with a permanent action. Keyboard focus also reveals
+   it for accessibility. */
+.ext-token-revoke {
   flex-shrink: 0;
-  padding: 4px 10px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-faint);
+  font-family: var(--font-sans-stack);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 160ms ease, color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.ext-token-row:hover .ext-token-revoke,
+.ext-token-row:focus-within .ext-token-revoke,
+.ext-token-revoke:focus-visible {
+  opacity: 1;
+}
+
+.ext-token-revoke:hover {
+  color: #d96565;
+  border-color: rgba(217, 101, 101, 0.45);
+  background: rgba(217, 101, 101, 0.06);
+}
+
+.ext-token-revoke:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ext-token-empty {
+  margin: 18px 0 0;
+  padding: 22px 24px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--bg-soft);
+  font-family: var(--font-serif-stack);
+  font-size: 14px;
+  font-style: italic;
+  line-height: 1.55;
+  color: var(--text-soft);
+  max-width: 56ch;
+}
+
+.ext-token-empty em {
+  color: var(--text);
+  font-style: italic;
+}
+
+/* Revoked-tokens disclosure — keeps audit history accessible without
+   cluttering the active list. */
+.ext-revoked-group {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--border);
+}
+
+.ext-revoked-group summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--text-soft);
+  font-family: var(--font-sans-stack);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  list-style: none;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.ext-revoked-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.ext-revoked-group summary:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.ext-revoked-hint {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.ext-revoked-group[open] .ext-revoked-hint::after {
+  content: " ↑";
+}
+
+.ext-token-list--revoked {
+  margin-top: 12px;
+  border-top: 0;
+}
+
+.ext-token-row--revoked {
+  opacity: 0.55;
+}
+
+.ext-token-row--revoked .ext-token-day {
+  font-style: italic;
+}
+
+.ext-token-tag {
+  flex-shrink: 0;
+  padding: 4px 12px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text-faint);
-  font-size: 10.5px;
+  font-family: var(--font-sans-stack);
+  font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
-.token-row-revoke {
-  flex-shrink: 0;
+@media (max-width: 540px) {
+  .ext-token-row {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 14px;
+  }
+  .ext-token-day {
+    font-size: 17px;
+  }
+  .ext-token-revoke {
+    /* Always-visible on touch — hover doesn't apply. */
+    opacity: 1;
+  }
 }
 
 .feedback-box {
@@ -8704,4 +9788,28 @@ html[data-sb="expanded"] .product-frame {
   .ai-modal-card h2 {
     font-size: 22px;
   }
+}
+
+/* Page-level toast — used for transient app-wide nudges (e.g. deep-link
+   "application not found"). Sits bottom-center, auto-dismisses via JS. */
+.page-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-soft);
+  color: var(--text);
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  animation: page-toast-in 220ms ease-out;
+}
+
+@keyframes page-toast-in {
+  from { transform: translate(-50%, 8px); opacity: 0; }
+  to   { transform: translate(-50%, 0);   opacity: 1; }
 }
