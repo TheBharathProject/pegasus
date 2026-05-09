@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ProductFrame } from "@/components/frames";
 import { MetricCard, Pill } from "@/components/ui";
 import { ApplicationTimeline } from "@/components/timeline";
+import { ImportModal } from "@/components/import-modal";
 import {
   api,
   apiBaseUrl,
@@ -98,8 +99,8 @@ export default function ApplicationsPage() {
   const [timeline, setTimeline] = useState<ApiStageChange[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [showTip, setShowTip] = useState(true);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const tweakFileRef = useRef<HTMLInputElement | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
 
   // AI tools dialogs
@@ -351,22 +352,6 @@ export default function ApplicationsPage() {
     }
   };
 
-  const handleImport = async (file: File) => {
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const result = await api.post<{ imported: number; errors: string[] }>(
-        "/job-tracker/applications/import",
-        fd
-      );
-      const errs = result.errors?.length ? `\n\nErrors:\n${result.errors.join("\n")}` : "";
-      window.alert(`Imported ${result.imported} applications.${errs}`);
-      await refresh();
-    } catch (e) {
-      window.alert(`Import failed: ${(e as Error).message}`);
-    }
-  };
-
   const handleExport = async () => {
     try {
       const token = getToken();
@@ -417,21 +402,10 @@ export default function ApplicationsPage() {
           <button
             className="ghost-button"
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => setImportOpen(true)}
           >
-            <ImportIcon width={14} height={14} /> Import CSV
+            <ImportIcon width={14} height={14} /> Import
           </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleImport(f);
-              e.target.value = "";
-            }}
-          />
           <button className="primary-button" onClick={openNew} type="button">
             <PlusIcon width={14} height={14} /> Add application
           </button>
@@ -1088,6 +1062,12 @@ export default function ApplicationsPage() {
           </div>
         </div>
       ) : null}
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => void refresh()}
+      />
     </ProductFrame>
   );
 }
