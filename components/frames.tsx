@@ -162,7 +162,7 @@ export function MarketingFrame({ children, current = "home" }: MarketingFramePro
           <span className="brand-badge">P</span>
           <span>Pegasus</span>
         </Link>
-        <nav className="topnav">
+        <nav className="topnav" aria-label="Pegasus navigation">
           {marketingLinks.map((link) => (
             <Link
               className={current === link.key ? "topnav-link active" : "topnav-link"}
@@ -177,22 +177,34 @@ export function MarketingFrame({ children, current = "home" }: MarketingFramePro
       </header>
       {children}
       <footer className="footer shell">
-        <div>
-          <div className="footer-title">Pegasus</div>
+        <div className="footer-copy">
+          <p className="footer-kicker">Pegasus</p>
+          <p className="footer-title">A calmer system for a messy job search.</p>
           <p className="muted">
             Job tracking, public profiles, community advice, and a browser clipper in one calm
             surface.
           </p>
-          <p className="muted small">by Shubham</p>
+          <p className="muted small footer-credit">Built by Shubham.</p>
         </div>
-        <nav className="footer-nav">
-          <Link href="/">Home</Link>
-          {/* Plain <a> escapes basePath /pegasus and lands on the sypher.in apex. */}
-          <a href="/blog">Blog</a>
-          <Link href="/community">Community</Link>
-          <Link href="/privacy-policy">Privacy Policy</Link>
-          <a href="/terms">Terms</a>
-        </nav>
+        <div className="footer-links">
+          <div className="footer-column">
+            <p className="footer-label">Explore</p>
+            <nav className="footer-nav" aria-label="Explore Pegasus">
+              <Link href="/">Home</Link>
+              {/* Plain <a> escapes basePath /pegasus and lands on the sypher.in apex. */}
+              <a href="/blog">Blog</a>
+              <Link href="/community">Community</Link>
+            </nav>
+          </div>
+          <div className="footer-column">
+            <p className="footer-label">Trust</p>
+            <nav className="footer-nav" aria-label="Pegasus legal">
+              <Link href="/privacy-policy">Privacy Policy</Link>
+              <a href="/terms">Terms</a>
+              <a href="mailto:buildwithshubham.dixit@gmail.com">Contact</a>
+            </nav>
+          </div>
+        </div>
       </footer>
     </div>
   );

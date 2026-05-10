@@ -2,10 +2,18 @@ import type { Metadata } from "next";
 import LoginClientPage from "./login-client";
 
 export const metadata: Metadata = {
-  title: "Login",
-  description: "Sign in to Pegasus with Google.",
+  title: "Login to Pegasus",
+  description:
+    "Sign in to Pegasus with Google to manage job applications, recruiter conversations, resumes, and extension sync.",
   alternates: { canonical: "https://sypher.in/pegasus/login" },
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: "website",
+    title: "Login to Pegasus",
+    description:
+      "Sign in to Pegasus with Google to manage job applications, recruiter conversations, resumes, and extension sync.",
+    url: "https://sypher.in/pegasus/login",
+  },
 };
 
 export default function LoginPage() {
