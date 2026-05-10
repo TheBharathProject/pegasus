@@ -5569,6 +5569,7 @@ html[data-sb="collapsed"] .signout-icon {
   font-size: clamp(2.15rem, 4.1vw, 3.9rem);
   line-height: 0.95;
   letter-spacing: -0.03em;
+  text-wrap: balance;
   color: var(--text);
 }
 
@@ -5586,6 +5587,10 @@ html[data-sb="collapsed"] .signout-icon {
   display: grid;
   gap: 12px;
   margin-top: 24px;
+}
+
+.login-mobile-cta {
+  display: none;
 }
 
 .login-point {
@@ -5718,8 +5723,21 @@ html[data-theme="light"] .login-expired {
 
   .topnav {
     width: 100%;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .topnav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .topnav-link,
+  .topnav > .ghost-button,
+  .topnav > .primary-button {
+    flex: 0 0 auto;
   }
 
   .login-stage {
@@ -5729,19 +5747,17 @@ html[data-theme="light"] .login-expired {
   }
 
   .login-copy {
-    order: 2;
     max-width: none;
     padding-top: 0;
   }
 
   .login-title {
-    max-width: none;
+    max-width: 15ch;
   }
 
   .login-card {
-    order: 1;
     position: static;
-    max-width: none;
+    max-width: 420px;
   }
 }
 
@@ -5753,8 +5769,9 @@ html[data-theme="light"] .login-expired {
   .topnav-link,
   .topnav > .ghost-button,
   .topnav > .primary-button {
-    flex: 1 1 calc(50% - 5px);
-    min-height: 40px;
+    min-height: 36px;
+    padding: 0 11px;
+    font-size: 13px;
   }
 
   .login-shell {
@@ -5779,8 +5796,9 @@ html[data-theme="light"] .login-expired {
   }
 
   .login-title {
-    max-width: 10ch;
-    font-size: clamp(1.95rem, 12vw, 2.8rem);
+    max-width: 15ch;
+    font-size: clamp(1.78rem, 8vw, 2.35rem);
+    line-height: 1.02;
   }
 
   .login-intro {
@@ -5793,6 +5811,32 @@ html[data-theme="light"] .login-expired {
 
   .login-point p {
     font-size: 13px;
+  }
+
+  .login-card {
+    display: none;
+  }
+
+  .login-mobile-cta {
+    display: grid;
+    gap: 10px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+
+  .login-mobile-primary {
+    justify-self: start;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 13px;
+  }
+
+  .login-mobile-note {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-faint);
   }
 }
 
@@ -5992,12 +6036,6 @@ html[data-theme="light"] .login-expired {
 }
 
 @media (max-width: 480px) {
-  .topnav-link,
-  .topnav > .ghost-button,
-  .topnav > .primary-button {
-    flex-basis: 100%;
-  }
-
   .footer-links {
     grid-template-columns: 1fr;
   }

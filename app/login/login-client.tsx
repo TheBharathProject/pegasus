@@ -64,6 +64,16 @@ function LoginInner() {
                 </div>
               </article>
             </div>
+
+            <div className="login-mobile-cta">
+              {expired ? (
+                <p className="login-expired">Your session expired. Sign in again to continue.</p>
+              ) : null}
+              <a className="primary-button login-mobile-primary" href={loginUrl()}>
+                Sign in with Google
+              </a>
+              <p className="login-mobile-note">No card. No spam. Just your search in one place.</p>
+            </div>
           </div>
 
           <section className="login-card" aria-label="Sign in to Pegasus">
