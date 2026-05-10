@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Pegasus icon">
+  <rect x="1" y="1" width="62" height="62" rx="18" fill="#1a1a1a" stroke="#3a3a3a" stroke-width="2"/>
+  <circle cx="49" cy="15" r="4" fill="#ececea"/>
+  <text
+    x="32"
+    y="41"
+    text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="34"
+    letter-spacing="-1.2"
+    fill="#ececea"
+  >
+    P
+  </text>
+</svg>
