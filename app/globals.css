@@ -5531,23 +5531,216 @@ html[data-sb="collapsed"] .signout-icon {
 
 /* LOGIN */
 .login-shell {
+  min-height: calc(100vh - 180px);
+  padding: 28px 0 40px;
+}
+
+.login-stage {
+  width: min(calc(100% - 32px), 1120px);
+  margin: 0 auto;
   display: grid;
-  place-items: center;
-  min-height: 100vh;
-  padding: 24px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 420px);
+  gap: 32px;
+  align-items: start;
+}
+
+.login-copy {
+  padding: 32px 0 0;
+}
+
+.login-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.login-title {
+  margin-top: 16px;
+  max-width: 12ch;
+  font-family: var(--font-serif-stack);
+  font-size: clamp(2.25rem, 4.4vw, 4.15rem);
+  line-height: 0.96;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.login-intro {
+  margin-top: 18px;
+  max-width: 560px;
+  font-family: var(--font-serif-stack);
+  font-size: clamp(1rem, 1.5vw, 1.12rem);
+  line-height: 1.65;
+  font-style: italic;
+  color: var(--text-soft);
+}
+
+.login-points {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.login-point {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+.login-point-index {
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding-top: 3px;
+}
+
+.login-point h2 {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-size: 1.16rem;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.login-point p {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-soft);
 }
 
 .login-card {
-  width: min(100%, 540px);
-  padding: 36px;
-  text-align: center;
+  position: sticky;
+  top: 96px;
+  padding: 26px 24px 22px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 34%),
+    var(--bg-soft);
+  box-shadow: var(--shadow);
 }
 
-.login-card h1 {
-  font-size: clamp(2.5rem, 6vw, 4rem);
+.login-card-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-serif-stack);
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.login-card-title {
+  margin: 20px 0 0;
+  font-family: var(--font-serif-stack);
+  font-size: clamp(1.6rem, 2vw, 2rem);
+  font-weight: 400;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.login-card-copy {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-soft);
+}
+
+.login-expired {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.login-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.login-primary,
+.login-secondary {
+  width: 100%;
+  min-height: 42px;
+  font-size: 14px;
+  border-radius: 10px;
+}
+
+.login-note {
+  margin-top: 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+html[data-theme="light"] .login-card {
+  background:
+    radial-gradient(circle at top left, rgba(26, 26, 26, 0.035), transparent 34%),
+    var(--bg-elevated);
+}
+
+html[data-theme="light"] .login-expired {
+  background: rgba(26, 26, 26, 0.03);
+}
+
+@media (max-width: 900px) {
+  .login-stage {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .login-copy {
+    padding-top: 8px;
+  }
+
+  .login-title {
+    max-width: none;
+  }
+
+  .login-card {
+    position: static;
+    max-width: 560px;
+  }
+}
+
+@media (max-width: 640px) {
+  .login-shell {
+    min-height: auto;
+    padding: 20px 0 28px;
+  }
+
+  .login-stage {
+    width: min(calc(100% - 24px), 1120px);
+    gap: 18px;
+  }
+
+  .login-point {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .login-card {
+    padding: 22px 18px 18px;
+    border-radius: 14px;
+  }
 }
 
 /* MARKETING / BLOG */
