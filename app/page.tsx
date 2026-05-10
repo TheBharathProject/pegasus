@@ -278,9 +278,9 @@ export default function HomePage() {
             </a>
             {/* Plain <a> escapes basePath /pegasus → these resolve at the sypher.in apex. */}
             <a href="/blog">Blog</a>
-            <a href="/privacy">Privacy</a>
+            <Link href="/privacy-policy">Privacy Policy</Link>
             <a href="/terms">Terms</a>
-            <a href="mailto:hello@example.com">Contact</a>
+            <a href="mailto:buildwithshubham.dixit@gmail.com">Contact</a>
           </nav>
         </div>
       </footer>

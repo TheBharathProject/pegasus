@@ -12,7 +12,7 @@ This inventory is based on three verified sources:
 2. Google sign-in page at `/login`
 3. Public blog index at `/blog`
 4. Individual blog article pages at `/blog/[slug]`
-5. Public privacy page at `/privacy`
+5. Public privacy page at `/privacy-policy`
 6. Public terms page at `/terms`
 7. Dashboard route at `/dashboard`
 8. Applications tracker at `/applications`

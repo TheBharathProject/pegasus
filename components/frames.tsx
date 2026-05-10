@@ -190,7 +190,7 @@ export function MarketingFrame({ children, current = "home" }: MarketingFramePro
           {/* Plain <a> escapes basePath /pegasus and lands on the sypher.in apex. */}
           <a href="/blog">Blog</a>
           <Link href="/community">Community</Link>
-          <a href="/privacy">Privacy</a>
+          <Link href="/privacy-policy">Privacy Policy</Link>
           <a href="/terms">Terms</a>
         </nav>
       </footer>
