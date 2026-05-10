@@ -26,6 +26,7 @@ import { useUnreadCount } from "@/lib/notifications";
 type MarketingFrameProps = {
   children: ReactNode;
   current?: "home" | "blog" | "community" | "privacy" | "terms";
+  hideAuthCta?: boolean;
 };
 
 type ProductNavKey =
@@ -154,7 +155,11 @@ function MarketingAuthCta() {
   );
 }
 
-export function MarketingFrame({ children, current = "home" }: MarketingFrameProps) {
+export function MarketingFrame({
+  children,
+  current = "home",
+  hideAuthCta = false
+}: MarketingFrameProps) {
   return (
     <div className="marketing-frame">
       <header className="topbar shell">
@@ -172,7 +177,7 @@ export function MarketingFrame({ children, current = "home" }: MarketingFramePro
               {link.label}
             </Link>
           ))}
-          <MarketingAuthCta />
+          {!hideAuthCta ? <MarketingAuthCta /> : null}
         </nav>
       </header>
       {children}

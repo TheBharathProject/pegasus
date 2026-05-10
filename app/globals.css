@@ -248,12 +248,17 @@ code {
 
 .topnav-link,
 .community-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--text-soft);
   background: transparent;
   font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
   transition: 180ms ease;
 }
 
@@ -5715,19 +5720,21 @@ html[data-theme="light"] .login-expired {
 
 @media (max-width: 900px) {
   .topbar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 18px 0;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 0;
   }
 
   .topnav {
-    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
     flex-wrap: nowrap;
+    justify-content: flex-end;
     gap: 8px;
     overflow-x: auto;
-    padding-bottom: 2px;
+    padding: 2px 0;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   .topnav::-webkit-scrollbar {
@@ -5763,25 +5770,38 @@ html[data-theme="light"] .login-expired {
 
 @media (max-width: 640px) {
   .marketing-frame {
-    padding-bottom: 40px;
+    padding-bottom: 24px;
+  }
+
+  .topbar {
+    justify-content: space-between;
+    gap: 8px;
   }
 
   .topnav-link,
   .topnav > .ghost-button,
   .topnav > .primary-button {
-    min-height: 36px;
-    padding: 0 11px;
-    font-size: 13px;
+    min-height: 34px;
+    padding: 0 9px;
+    font-size: 12px;
   }
 
   .login-shell {
     min-height: auto;
-    padding: 10px 0 24px;
+    padding: 10px 0 8px;
   }
 
   .login-stage {
     width: min(calc(100% - 20px), 560px);
     gap: 16px;
+  }
+
+  .topnav {
+    width: auto;
+    max-width: calc(100% - 108px);
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 0;
   }
 
   .login-point {
@@ -5819,25 +5839,35 @@ html[data-theme="light"] .login-expired {
 
   .login-mobile-cta {
     display: grid;
+    justify-items: center;
     gap: 10px;
-    margin-top: 22px;
-    padding-top: 18px;
+    margin-top: 18px;
+    padding-top: 14px;
     border-top: 1px solid var(--border);
+    text-align: center;
   }
 
   .login-mobile-primary {
-    justify-self: start;
+    justify-self: center;
     min-height: 38px;
-    padding: 0 14px;
+    min-width: min(100%, 220px);
+    padding: 0 16px;
     border-radius: 999px;
     font-size: 13px;
   }
 
   .login-mobile-note {
+    max-width: 28ch;
     font-size: 12px;
     line-height: 1.5;
     color: var(--text-faint);
   }
+}
+
+.login-google-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
 }
 
 /* MARKETING / BLOG */
@@ -6025,8 +6055,8 @@ html[data-theme="light"] .login-expired {
   .footer {
     grid-template-columns: 1fr;
     gap: 24px;
-    margin-top: 60px;
-    padding-top: 24px;
+    margin-top: 40px;
+    padding-top: 20px;
   }
 
   .footer-links {
@@ -6036,8 +6066,19 @@ html[data-theme="light"] .login-expired {
 }
 
 @media (max-width: 480px) {
+  .brand {
+    gap: 10px;
+    font-size: 0.92rem;
+  }
+
+  .topnav {
+    max-width: calc(100% - 98px);
+    gap: 5px;
+  }
+
   .footer-links {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
 }
 
