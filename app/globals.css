@@ -5715,19 +5715,21 @@ html[data-theme="light"] .login-expired {
 
 @media (max-width: 900px) {
   .topbar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 18px 0;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 0;
   }
 
   .topnav {
-    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
     flex-wrap: nowrap;
+    justify-content: flex-end;
     gap: 8px;
     overflow-x: auto;
-    padding-bottom: 2px;
+    padding: 2px 0;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   .topnav::-webkit-scrollbar {
@@ -5819,25 +5821,35 @@ html[data-theme="light"] .login-expired {
 
   .login-mobile-cta {
     display: grid;
+    justify-items: center;
     gap: 10px;
     margin-top: 22px;
     padding-top: 18px;
     border-top: 1px solid var(--border);
+    text-align: center;
   }
 
   .login-mobile-primary {
-    justify-self: start;
+    justify-self: center;
     min-height: 38px;
-    padding: 0 14px;
+    min-width: min(100%, 220px);
+    padding: 0 16px;
     border-radius: 999px;
     font-size: 13px;
   }
 
   .login-mobile-note {
+    max-width: 28ch;
     font-size: 12px;
     line-height: 1.5;
     color: var(--text-faint);
   }
+}
+
+.login-google-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
 }
 
 /* MARKETING / BLOG */
@@ -6036,8 +6048,21 @@ html[data-theme="light"] .login-expired {
 }
 
 @media (max-width: 480px) {
+  .topbar {
+    gap: 10px;
+  }
+
+  .brand {
+    font-size: 0.98rem;
+  }
+
+  .topnav {
+    gap: 6px;
+  }
+
   .footer-links {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
 }
 
