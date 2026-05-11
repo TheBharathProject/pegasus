@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductFrame } from "@/components/frames";
 import { MetricCard, Pill } from "@/components/ui";
@@ -12,6 +13,7 @@ import {
   type ApiApplication,
   type ApiStageChange
 } from "@/lib/api-client";
+import { CREDIT_COSTS } from "@/lib/billing";
 import { getToken, isAuthed } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 import {
@@ -52,11 +54,25 @@ const STAGE_TONES: Record<string, string> = {
 
 const STAGES = Object.keys(STAGE_LABELS);
 
+// SOURCE_LABELS maps the canonical UPPERCASE enum (what the server
+// stores + validates) to readable display text. Used in table + detail
+// renders. Keep keys aligned with backend `validSources` in
+// internal/jobtracker/types.go.
+const SOURCE_LABELS: Record<string, string> = {
+  LINKEDIN: "LinkedIn",
+  NAUKRI: "Naukri",
+  REFERRAL: "Referral",
+  COMPANY_SITE: "Company site",
+  OTHER: "Other"
+};
+
 const EMPTY_DRAFT = {
   company: "",
   role: "",
   stage: "INTERESTED",
-  source: "LinkedIn",
+  // Empty value matches the leading "—" option; the backend accepts
+  // null/empty source. Picking explicitly is optional.
+  source: "",
   appliedAt: new Date().toISOString().slice(0, 10),
   applyDeadline: "",
   location: "",
@@ -136,6 +152,23 @@ function ApplicationsInner() {
   const [tweakJD, setTweakJD] = useState("");
   const [tweakFile, setTweakFile] = useState<File | null>(null);
   const [tweakResumeId, setTweakResumeId] = useState<string | null>(null);
+  // Resume-tweak revision state. tweakResult holds the latest AI output
+  // so the modal can render it inline; tweakHistory lists past versions
+  // for this application (lightweight summaries); tweakParentId is set
+  // when the user clicks "Continue" on a past version, forming the
+  // revision chain via the backend's parentId field.
+  const [tweakResult, setTweakResult] = useState<{
+    id: string;
+    title: string;
+    tweakedText: string;
+    userEdits?: string;
+    parentId?: string | null;
+    createdAt: string;
+  } | null>(null);
+  const [tweakHistory, setTweakHistory] = useState<
+    Array<{ id: string; title: string; parentId?: string | null; createdAt: string }>
+  >([]);
+  const [tweakParentId, setTweakParentId] = useState<string | null>(null);
   const [vaultResumes, setVaultResumes] = useState<
     Array<{ id: string; fileName: string; label?: string }>
   >([]);
@@ -188,7 +221,7 @@ function ApplicationsInner() {
       company: a.company ?? "",
       role: a.role ?? "",
       stage: a.stage ?? "INTERESTED",
-      source: a.source ?? "LinkedIn",
+      source: a.source ?? "",
       appliedAt: a.appliedAt ? a.appliedAt.slice(0, 10) : "",
       applyDeadline: a.applyDeadline ? a.applyDeadline.slice(0, 10) : "",
       location: a.location ?? "",
@@ -310,6 +343,22 @@ function ApplicationsInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewParam, items.length, loading]);
 
+  // Load past tweaks for this application whenever the tweak modal opens.
+  // Reset prior result + parent so each session starts clean — the user
+  // can pick "Continue" on a past version to set parentId again.
+  useEffect(() => {
+    if (!showTweakDialog || !viewingApp) return;
+    setTweakResult(null);
+    setTweakParentId(null);
+    api
+      .get<{ items: typeof tweakHistory }>(
+        `/job-tracker/ai/resume/tweaks?applicationId=${encodeURIComponent(viewingApp.id)}`
+      )
+      .then((r) => setTweakHistory(r.items || []))
+      .catch(() => setTweakHistory([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTweakDialog, viewingApp?.id]);
+
   const editFromView = () => {
     const a = viewingApp;
     if (!a) return;
@@ -369,7 +418,10 @@ function ApplicationsInner() {
 
   const handleGenerateTweak = async () => {
     if (!viewingApp || !tweakJD.trim()) return;
-    if (!tweakFile && !tweakResumeId) {
+    // A source resume is required for ROOT tweaks; if tweakParentId is set
+    // the backend resolves source from the parent row, so a fresh upload
+    // isn't needed for a "Continue" action.
+    if (!tweakParentId && !tweakFile && !tweakResumeId) {
       setAiError("Pick a resume from your vault or upload a new one.");
       return;
     }
@@ -399,18 +451,45 @@ function ApplicationsInner() {
         });
         resumeFileId = upload.file.id;
       }
-      await api.post("/job-tracker/ai/resume/tweak", {
+      const title = `${viewingApp.company} — ${viewingApp.role}`.slice(0, 120);
+      const saved = await api.post<{
+        id: string;
+        title: string;
+        tweakedText: string;
+        userEdits?: string;
+        parentId?: string | null;
+        createdAt: string;
+      }>("/job-tracker/ai/resume/tweaks", {
         applicationId: viewingApp.id,
-        jobDescription: tweakJD,
-        fileId: resumeFileId
+        parentId: tweakParentId || "",
+        sourceFileId: resumeFileId || "",
+        prompt: tweakJD,
+        title
       });
-      setShowTweakDialog(false);
-      window.alert("Tweaked resume generated. Check your downloads.");
+      setTweakResult(saved);
+      // Refresh the history so the new row shows up in the past-versions list.
+      api
+        .get<{ items: typeof tweakHistory }>(
+          `/job-tracker/ai/resume/tweaks?applicationId=${encodeURIComponent(viewingApp.id)}`
+        )
+        .then((r) => setTweakHistory(r.items || []))
+        .catch(() => {});
     } catch (e) {
       setAiError((e as Error).message);
     } finally {
       setAiBusy(false);
     }
+  };
+
+  // Continue tweaking from a past version. Sets parentId so the next
+  // generation chains from that row, clears file/upload (source carries
+  // forward from the parent), and resets the result panel.
+  const continueFromTweak = (id: string) => {
+    setTweakParentId(id);
+    setTweakResult(null);
+    setTweakFile(null);
+    setTweakResumeId(null);
+    setAiError(null);
   };
 
   const handleExport = async () => {
@@ -489,7 +568,15 @@ function ApplicationsInner() {
       {showTip ? (
         <section className="notice">
           <span>
-            Tip — save jobs from LinkedIn, Indeed, or Naukri in one click with our Chrome extension.
+            Tip — save jobs from LinkedIn, Indeed, or Naukri in one click with our{" "}
+            <a
+              href="https://chromewebstore.google.com/detail/pegasus-%E2%80%94-job-clipper/oghjgddbopcpgdbpgijkkaabiaebedgp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2"
+            >
+              Chrome extension
+            </a>.
           </span>
           <button className="icon-button" aria-label="Dismiss" onClick={() => setShowTip(false)} type="button">
             <CloseIcon width={14} height={14} />
@@ -539,7 +626,9 @@ function ApplicationsInner() {
                         {STAGE_LABELS[application.stage] ?? application.stage}
                       </Pill>
                     </td>
-                    <td data-label="Source">{application.source ?? "—"}</td>
+                    <td data-label="Source">
+                      {application.source ? SOURCE_LABELS[application.source] ?? application.source : "—"}
+                    </td>
                     <td data-label="Applied">{fmtDate(application.appliedAt ?? "")}</td>
                     <td data-label="Updated">{fmtRelative(application.updatedAt)}</td>
                     <td className="row-actions" data-label="">
@@ -656,7 +745,13 @@ function ApplicationsInner() {
       )}
 
       {viewingApp ? (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={closeView}>
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="app-detail-title"
+          onClick={closeView}
+        >
           <div
             className="modal-card modal-card--wide"
             onClick={(e) => e.stopPropagation()}
@@ -672,7 +767,7 @@ function ApplicationsInner() {
 
             <header className="app-detail-head">
               <p className="eyebrow">Application</p>
-              <h2 className="app-detail-title">{viewingApp.company}</h2>
+              <h2 id="app-detail-title" className="app-detail-title">{viewingApp.company}</h2>
               <p className="app-detail-sub">{viewingApp.role}</p>
               <div className="app-detail-tags">
                 <Pill tone={STAGE_TONES[viewingApp.stage] || "default"}>
@@ -710,7 +805,9 @@ function ApplicationsInner() {
                 <div className="app-detail-fields">
                   <div className="app-detail-field">
                     <span className="app-detail-label">Source</span>
-                    <span className="app-detail-value">{viewingApp.source || "—"}</span>
+                    <span className="app-detail-value">
+                      {viewingApp.source ? SOURCE_LABELS[viewingApp.source] ?? viewingApp.source : "—"}
+                    </span>
                   </div>
                   <div className="app-detail-field">
                     <span className="app-detail-label">Location</span>
@@ -802,10 +899,16 @@ function ApplicationsInner() {
       ) : null}
 
       {showModal ? (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={closeModal}>
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="app-form-title"
+          onClick={closeModal}
+        >
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="list-head">
-              <h2>{editingId ? "Edit application" : "New application"}</h2>
+              <h2 id="app-form-title">{editingId ? "Edit application" : "New application"}</h2>
               <button className="icon-button" aria-label="Close" onClick={closeModal} type="button">
                 <CloseIcon width={14} height={14} />
               </button>
@@ -839,13 +942,18 @@ function ApplicationsInner() {
               </div>
               <div className="field">
                 <label>Source</label>
+                {/* Values match the server-side enum (UPPERCASE) introduced
+                    by the source validator in handlers_applications.go +
+                    the CHECK constraint in migrations/0016. Labels are
+                    title-case for readability. Empty value ("—") submits
+                    as null/empty, which the backend accepts. */}
                 <select value={draft.source} onChange={(e) => setDraft({ ...draft, source: e.target.value })}>
-                  <option>LinkedIn</option>
-                  <option>Naukri</option>
-                  <option>Referral</option>
-                  <option>Company site</option>
-                  <option>Indeed</option>
-                  <option>Other</option>
+                  <option value="">—</option>
+                  <option value="LINKEDIN">LinkedIn</option>
+                  <option value="NAUKRI">Naukri</option>
+                  <option value="REFERRAL">Referral</option>
+                  <option value="COMPANY_SITE">Company site</option>
+                  <option value="OTHER">Other</option>
                 </select>
               </div>
               <div className="field">
@@ -854,6 +962,14 @@ function ApplicationsInner() {
                   type="date"
                   value={draft.appliedAt}
                   onChange={(e) => setDraft({ ...draft, appliedAt: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>Last date to apply</label>
+                <input
+                  type="date"
+                  value={draft.applyDeadline}
+                  onChange={(e) => setDraft({ ...draft, applyDeadline: e.target.value })}
                 />
               </div>
               <div className="field">
@@ -875,6 +991,7 @@ function ApplicationsInner() {
               <div className="field">
                 <label>Job link</label>
                 <input
+                  type="url"
                   placeholder="https://..."
                   value={draft.jobLink}
                   onChange={(e) => setDraft({ ...draft, jobLink: e.target.value })}
@@ -919,11 +1036,12 @@ function ApplicationsInner() {
           className="modal-backdrop ai-modal-backdrop"
           role="dialog"
           aria-modal="true"
+          aria-labelledby="cover-letter-title"
           onClick={() => setShowCoverDialog(false)}
         >
           <div className="modal-card ai-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="list-head">
-              <h2>
+              <h2 id="cover-letter-title">
                 Cover letter — <em className="ai-modal-subject">{viewingApp.role}</em> at{" "}
                 <em className="ai-modal-subject">{viewingApp.company}</em>
               </h2>
@@ -950,6 +1068,11 @@ function ApplicationsInner() {
                 <p className="muted small ai-helper">
                   Paste the JD. The AI will use it together with your profile to write a tailored
                   letter.
+                </p>
+                <p className="muted small ai-helper">
+                  Free within your monthly AI quota; beyond that, costs{" "}
+                  <strong>{CREDIT_COSTS.coverLetter} credits</strong>.{" "}
+                  <Link href="/upgrade#credits">Top up →</Link>
                 </p>
               </div>
               {aiError ? (
@@ -985,11 +1108,12 @@ function ApplicationsInner() {
           className="modal-backdrop ai-modal-backdrop"
           role="dialog"
           aria-modal="true"
+          aria-labelledby="tweak-title"
           onClick={() => setShowTweakDialog(false)}
         >
           <div className="modal-card ai-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="list-head">
-              <h2>Tweak resume as per job description</h2>
+              <h2 id="tweak-title">Tweak resume as per job description</h2>
               <button
                 className="icon-button"
                 aria-label="Close"
@@ -1092,12 +1216,82 @@ function ApplicationsInner() {
                 <p className="muted small ai-helper">
                   The AI will match your resume against this role.
                 </p>
+                <p className="muted small ai-helper">
+                  Free within your monthly AI quota; beyond that, costs{" "}
+                  <strong>{CREDIT_COSTS.resumeTweak} credits</strong> per version.{" "}
+                  <Link href="/upgrade#credits">Top up →</Link>
+                </p>
               </div>
 
               {aiError ? (
                 <p className="notice" style={{ marginTop: 12 }}>
                   <em>{aiError}</em>
                 </p>
+              ) : null}
+
+              {tweakParentId ? (
+                <p className="muted small" style={{ marginTop: 8 }}>
+                  Continuing from a saved version —{" "}
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={() => setTweakParentId(null)}
+                  >
+                    start fresh instead
+                  </button>
+                </p>
+              ) : null}
+
+              {tweakResult ? (
+                <div className="field" style={{ marginTop: 16 }}>
+                  <label>Tweaked resume · {tweakResult.title}</label>
+                  <pre
+                    className="ai-textarea"
+                    style={{ whiteSpace: "pre-wrap", maxHeight: 320, overflowY: "auto" }}
+                  >
+                    {tweakResult.tweakedText}
+                  </pre>
+                  <p className="muted small ai-helper">
+                    Saved automatically — you can come back to this version
+                    later from the &ldquo;Past versions&rdquo; list below.
+                  </p>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={() => continueFromTweak(tweakResult.id)}
+                    >
+                      Continue tweaking this version
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {tweakHistory.length > 0 ? (
+                <div className="field" style={{ marginTop: 16 }}>
+                  <label>Past versions for this application</label>
+                  <ul className="resume-pick-list" style={{ listStyle: "none", padding: 0 }}>
+                    {tweakHistory.map((h) => (
+                      <li key={h.id} style={{ marginBottom: 6 }}>
+                        <button
+                          type="button"
+                          className="resume-pick-card"
+                          onClick={() => continueFromTweak(h.id)}
+                          style={{ textAlign: "left", width: "100%" }}
+                        >
+                          <FileIcon width={16} height={16} />
+                          <span>
+                            <strong>{h.title || "Untitled tweak"}</strong>
+                            <em className="muted small">
+                              {new Date(h.createdAt).toLocaleString()}
+                              {h.parentId ? " · continued" : ""}
+                            </em>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ) : null}
             </div>
             <div className="ai-modal-foot">
@@ -1112,12 +1306,13 @@ function ApplicationsInner() {
                 className="primary-button"
                 type="button"
                 disabled={
-                  !tweakJD.trim() || (!tweakFile && !tweakResumeId) || aiBusy
+                  !tweakJD.trim() ||
+                  (!tweakParentId && !tweakFile && !tweakResumeId) ||
+                  aiBusy
                 }
                 onClick={handleGenerateTweak}
               >
-                <DownloadIcon width={13} height={13} />
-                {aiBusy ? "Generating…" : "Generate & Download PDF"}
+                {aiBusy ? "Generating…" : tweakParentId ? "Generate next version" : "Generate"}
               </button>
             </div>
           </div>

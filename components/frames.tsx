@@ -21,6 +21,7 @@ import {
   UserPlusIcon
 } from "./icons";
 import { useAuth, signOut } from "@/lib/auth";
+import { useBillingMe } from "@/lib/billing";
 import { useUnreadCount } from "@/lib/notifications";
 
 type MarketingFrameProps = {
@@ -338,6 +339,7 @@ export function ProductFrame({
           ))}
         </nav>
         <div className="sidebar-spacer" />
+        <SidebarBilling />
         <SidebarUser />
       </aside>
       <main className={noPadding ? "product-main is-flush" : "product-main"}>
@@ -361,6 +363,33 @@ export function ProductFrame({
   );
 }
 
+// SidebarBilling shows the credits balance + an upgrade nudge for free
+// users, just above the user card at the bottom of the sidebar. Reads
+// from the shared cache in lib/billing so this widget doesn't add a
+// network call on top of whatever the Settings/Upgrade pages already did.
+function SidebarBilling() {
+  const { authed } = useAuth();
+  const { billing } = useBillingMe();
+  if (!authed || !billing) return null;
+  const isPremium = !!billing.premium && billing.premium.status === "active";
+  return (
+    <Link
+      className="sidebar-billing"
+      href={isPremium ? "/upgrade#credits" : "/upgrade"}
+      aria-label={isPremium ? "Top up credits" : "Upgrade to Premium"}
+      title={isPremium ? "Top up credits" : "Upgrade to Premium"}
+    >
+      <span className="sidebar-billing-figure">
+        {billing.creditsBalance.toLocaleString("en-IN")}
+      </span>
+      <span className="sidebar-billing-copy">
+        <strong>credits</strong>
+        <em>{isPremium ? "Top up →" : "Upgrade →"}</em>
+      </span>
+    </Link>
+  );
+}
+
 function SidebarUser() {
   const { authed, loading, user } = useAuth();
   if (loading || !authed || !user) {
@@ -379,29 +408,43 @@ function SidebarUser() {
         .join("")
     : (user.email?.[0]?.toUpperCase() ?? "·");
 
+  // Split into a profile-link (avatar + name/email) and a real
+  // sign-out button. The trailing icon was visually misleading before —
+  // it implied "go to" but the whole row only ever opened /profile. The
+  // spec calls for an explicit aria-labelled Sign out control.
   return (
-    <Link className="sidebar-user" href="/profile" aria-label="Open your profile">
-      {user.pictureUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          className="sidebar-user-avatar"
-          src={user.pictureUrl}
-          alt=""
-          referrerPolicy="no-referrer"
-          width={32}
-          height={32}
-        />
-      ) : (
-        <span className="sidebar-user-avatar sidebar-user-avatar--initials">{initials}</span>
-      )}
-      <div className="sidebar-user-copy">
-        <strong>{user.name}</strong>
-        <span>{user.email}</span>
-      </div>
-      <span className="signout-icon" aria-hidden="true">
+    <div className="sidebar-user">
+      <Link className="sidebar-user-link" href="/profile" aria-label="Open your profile">
+        {user.pictureUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            className="sidebar-user-avatar"
+            src={user.pictureUrl}
+            alt=""
+            referrerPolicy="no-referrer"
+            width={32}
+            height={32}
+          />
+        ) : (
+          <span className="sidebar-user-avatar sidebar-user-avatar--initials">{initials}</span>
+        )}
+        <div className="sidebar-user-copy">
+          <strong>{user.name}</strong>
+          <span>{user.email}</span>
+        </div>
+      </Link>
+      <button
+        type="button"
+        className="signout-icon sidebar-signout-btn"
+        aria-label="Sign out"
+        title="Sign out"
+        onClick={() => {
+          void signOut("/");
+        }}
+      >
         <ArrowUpRightIcon width={14} height={14} />
-      </span>
-    </Link>
+      </button>
+    </div>
   );
 }
 

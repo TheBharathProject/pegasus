@@ -5,6 +5,7 @@ import { ProductFrame } from "@/components/frames";
 import { ArrowRightIcon, UploadIcon } from "@/components/icons";
 import { renderMarkdown } from "@/lib/markdown";
 import { api, ApiError } from "@/lib/api-client";
+import { CREDIT_COSTS } from "@/lib/billing";
 import { isAuthed } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 
@@ -251,6 +252,13 @@ export default function ResumeAiPage() {
                       }}
                     >
                       We extract the text and never store the file.
+                    </p>
+                    <p
+                      className="muted small"
+                      style={{ marginTop: 6 }}
+                    >
+                      Free within your monthly AI quota; beyond that,{" "}
+                      <strong>{CREDIT_COSTS.resumeReport} credits</strong>.
                     </p>
                   </div>
                 </div>

@@ -665,6 +665,7 @@ export default function ProfilePage() {
             <div className="field">
               <label>Website</label>
               <input
+                type="url"
                 placeholder="https://yourname.dev"
                 value={aboutDraft.websiteUrl}
                 onChange={(e) => setAboutDraft({ ...aboutDraft, websiteUrl: e.target.value })}
@@ -673,6 +674,7 @@ export default function ProfilePage() {
             <div className="field">
               <label>LinkedIn</label>
               <input
+                type="url"
                 placeholder="https://linkedin.com/in/yourname"
                 value={aboutDraft.linkedinUrl}
                 onChange={(e) => setAboutDraft({ ...aboutDraft, linkedinUrl: e.target.value })}
@@ -681,6 +683,7 @@ export default function ProfilePage() {
             <div className="field">
               <label>GitHub</label>
               <input
+                type="url"
                 placeholder="https://github.com/yourname"
                 value={aboutDraft.githubUrl}
                 onChange={(e) => setAboutDraft({ ...aboutDraft, githubUrl: e.target.value })}
@@ -879,6 +882,7 @@ export default function ProfilePage() {
             <div className="field">
               <label>Link</label>
               <input
+                type="url"
                 placeholder="https://…"
                 value={prDraft.link}
                 onChange={(e) => setPrDraft({ ...prDraft, link: e.target.value })}

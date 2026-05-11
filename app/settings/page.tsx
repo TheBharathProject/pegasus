@@ -15,6 +15,7 @@ import {
   TrashIcon
 } from "@/components/icons";
 import { api, type ApiUser, type ApiProfile, type ApiAPIToken, type ApiBillingMe } from "@/lib/api-client";
+import { fetchBillingMe } from "@/lib/billing";
 import { isAuthed, clearToken } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 import {
@@ -211,7 +212,9 @@ export default function SettingsPage() {
       .catch(() => {});
     api.get<AIUsage>("/job-tracker/ai/usage").then(setUsage).catch(() => {});
     api.get<ApiAPIToken[]>("/job-tracker/me/api-tokens").then(setApiTokens).catch(() => {});
-    api.get<ApiBillingMe>("/billing/me").then(setBilling).catch(() => {});
+    // Route through the cached fetcher so Upgrade + Sidebar + AI dialogs
+    // share one request within the TTL window (the §8.2 over-fetch fix).
+    fetchBillingMe().then(setBilling).catch(() => {});
 
     // Detect the extension. The content script runs at document_start
     // and stamps the marker before React mounts, so a single read is
@@ -291,22 +294,26 @@ export default function SettingsPage() {
     setCopyStatus(msg);
     setTimeout(() => setCopyStatus(null), 4000);
     // Webhook usually lands within a second or two; refresh /billing/me
-    // a moment later so the section reflects the new state.
+    // a moment later so the section reflects the new state. Bypass cache
+    // because we know it's stale post-checkout.
     setTimeout(() => {
-      api.get<ApiBillingMe>("/billing/me").then(setBilling).catch(() => {});
+      fetchBillingMe({ force: true }).then(setBilling).catch(() => {});
     }, 1500);
   }, []);
 
+  // CancelSubscriptionModal state. window.confirm doesn't fit the
+  // app's modal language and skips period-end context; this dialog
+  // shows the date premium will lapse + what stays accessible.
+  const [showCancelModal, setShowCancelModal] = useState(false);
+
   const handleCancelSubscription = async () => {
     if (!billing?.premium || billing.premium.kind !== "recurring") return;
-    if (!window.confirm(
-      "Cancel auto-renewal? You'll keep premium until the end of your current period."
-    )) return;
     setBillingBusy(true);
     try {
       await api.post(`/billing/subscriptions/${billing.premium.id}/cancel`, {});
-      const fresh = await api.get<ApiBillingMe>("/billing/me");
+      const fresh = await fetchBillingMe({ force: true });
       setBilling(fresh);
+      setShowCancelModal(false);
     } catch (e) {
       window.alert(`Cancel failed: ${(e as Error).message}`);
     } finally {
@@ -665,10 +672,10 @@ export default function SettingsPage() {
                 <button
                   className="billing-link-btn"
                   type="button"
-                  onClick={handleCancelSubscription}
+                  onClick={() => setShowCancelModal(true)}
                   disabled={billingBusy}
                 >
-                  {billingBusy ? "Cancelling…" : "Cancel auto-renewal"}
+                  Cancel auto-renewal
                 </button>
               ) : null}
             </aside>
@@ -689,13 +696,13 @@ export default function SettingsPage() {
                   {(billing?.creditsBalance ?? 0).toLocaleString("en-IN")}
                 </p>
                 <p className="billing-credits-label">
-                  <em>credits</em> available
+                  paid <em>credits</em> · never expire
                 </p>
               </div>
             </div>
 
             <div className="billing-tokens">
-              <p className="billing-tokens-eyebrow">AI tokens · this month</p>
+              <p className="billing-tokens-eyebrow">Free AI tokens · this month</p>
               <div
                 className="billing-tokens-bar"
                 role="progressbar"
@@ -881,7 +888,14 @@ export default function SettingsPage() {
           <p className="muted small">
             Save jobs from LinkedIn, Indeed, Naukri, or any careers page with one click. Each
             browser you install the extension on needs its own token. Tokens never expire — revoke
-            one to sign that browser out.
+            one to sign that browser out.{" "}
+            <a
+              href="https://chromewebstore.google.com/detail/pegasus-%E2%80%94-job-clipper/oghjgddbopcpgdbpgijkkaabiaebedgp"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Install from Chrome Web Store →
+            </a>
           </p>
           {extensionInstalled ? (
             <p className="extension-detected small">
@@ -1125,6 +1139,7 @@ export default function SettingsPage() {
           }}
           role="dialog"
           aria-modal="true"
+          aria-labelledby="delete-account-title"
         >
           <div
             className="modal-card"
@@ -1132,7 +1147,7 @@ export default function SettingsPage() {
             style={{ maxWidth: 460 }}
           >
             <div className="list-head">
-              <h2>Delete your account?</h2>
+              <h2 id="delete-account-title">Delete your account?</h2>
               <button
                 className="icon-button"
                 aria-label="Close"
@@ -1187,6 +1202,83 @@ export default function SettingsPage() {
                 }
               >
                 {deleting ? "Deleting…" : "Delete forever"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Cancel-subscription confirmation modal. Surfaces the
+          period-end date so the user knows exactly when premium lapses,
+          and frames "what stays accessible" so cancellation feels less
+          like a cliff. Replaces the prior window.confirm. */}
+      {showCancelModal && billing?.premium && billing.premium.kind === "recurring" ? (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowCancelModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cancel-sub-title"
+        >
+          <div
+            className="modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 480 }}
+          >
+            <div className="list-head">
+              <h2 id="cancel-sub-title">Cancel auto-renewal?</h2>
+              <button
+                className="icon-button"
+                aria-label="Close"
+                type="button"
+                onClick={() => setShowCancelModal(false)}
+              >
+                <CloseIcon width={14} height={14} />
+              </button>
+            </div>
+            <p
+              className="muted"
+              style={{
+                marginTop: 12,
+                fontFamily: "var(--font-serif-stack)",
+                fontStyle: "italic"
+              }}
+            >
+              Your premium features keep working until
+              {" "}
+              <strong>
+                {billing.premium.currentPeriodEnd
+                  ? new Date(billing.premium.currentPeriodEnd).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric"
+                    })
+                  : "the end of your current period"}
+              </strong>
+              . After that, the account stays — applications, notes, resumes,
+              and credits all remain — but auto-renewal stops and premium-only
+              features (email digest, etc.) turn off.
+            </p>
+            <p className="muted small" style={{ marginTop: 12 }}>
+              Razorpay won&apos;t charge your card again unless you re-subscribe.
+              Existing credits never expire.
+            </p>
+            <div className="section-actions" style={{ justifyContent: "flex-end", marginTop: 16 }}>
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => setShowCancelModal(false)}
+                disabled={billingBusy}
+              >
+                Keep subscription
+              </button>
+              <button
+                className="primary-button"
+                type="button"
+                onClick={handleCancelSubscription}
+                disabled={billingBusy}
+              >
+                {billingBusy ? "Cancelling…" : "Cancel auto-renewal"}
               </button>
             </div>
           </div>

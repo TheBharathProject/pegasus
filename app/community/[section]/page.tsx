@@ -1294,6 +1294,7 @@ function RecruiterModal({
         <div className="field wide">
           <label>LinkedIn URL</label>
           <input
+            type="url"
             placeholder="https://linkedin.com/in/…"
             value={draft.linkedinUrl}
             onChange={(e) => setDraft({ ...draft, linkedinUrl: e.target.value })}

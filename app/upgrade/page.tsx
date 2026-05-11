@@ -20,6 +20,7 @@ import {
   SparkleStarIcon,
 } from "@/components/icons";
 import { api, type ApiBillingMe } from "@/lib/api-client";
+import { fetchBillingMe } from "@/lib/billing";
 import { isAuthed } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 
@@ -82,10 +83,15 @@ export default function UpgradePage() {
   // Pull the authoritative pack list + the current premium state off
   // /billing/me. If the call fails (e.g. user not signed in), fall back
   // to the bundled pack list and treat as free-tier for the upsell.
+  // Pre-warm checkout.js while we wait — by the time the user clicks
+  // Subscribe, the SDK is already cached. Fire-and-forget; failure
+  // only matters at click time and is surfaced there.
   useEffect(() => {
     if (!isAuthed()) return;
-    api
-      .get<ApiBillingMe>("/billing/me")
+    void loadRazorpay().catch(() => {
+      /* swallow — startCheckout will surface the error on click */
+    });
+    fetchBillingMe()
       .then((r) => {
         setBilling(r);
         if (Array.isArray(r.creditPacks) && r.creditPacks.length > 0) {
@@ -140,7 +146,8 @@ export default function UpgradePage() {
         handler: () => {
           // Payment completed in Checkout — actual state changes happen
           // via webhook. Bounce to /settings with the success copy.
-          window.location.href = `/pegasus/settings?billing=${encodeURIComponent(successMessage)}`;
+          // Route through goTo() so basePath stays in one place.
+          goTo(`/settings?billing=${encodeURIComponent(successMessage)}`);
         },
         modal: {
           ondismiss: () => {
