@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ProductFrame } from "@/components/frames";
 import { ArrowRightIcon, UploadIcon } from "@/components/icons";
 import { renderMarkdown } from "@/lib/markdown";
-import { api, ApiError } from "@/lib/api-client";
+import { api, ApiError, downloadPDF } from "@/lib/api-client";
 import { CREDIT_COSTS } from "@/lib/billing";
 import { isAuthed } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
@@ -191,13 +191,28 @@ export default function ResumeAiPage() {
                   {report.score} / 100
                 </h2>
               </div>
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={resetWizard}
-              >
-                Run another analysis
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => {
+                    downloadPDF(
+                      "/job-tracker/ai/resume/report/latest/pdf",
+                      null,
+                      `resume-report-${new Date().toISOString().slice(0, 10)}.pdf`
+                    ).catch((e: Error) => window.alert(`Download failed: ${e.message}`));
+                  }}
+                >
+                  Download report
+                </button>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={resetWizard}
+                >
+                  Run another analysis
+                </button>
+              </div>
             </div>
             {usage && usage.limit > 0 ? (
               <p className="muted small" style={{ marginTop: 8 }}>

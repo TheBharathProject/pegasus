@@ -10,6 +10,7 @@ import { ImportModal } from "@/components/import-modal";
 import {
   api,
   apiBaseUrl,
+  downloadPDF,
   type ApiApplication,
   type ApiApplicationPage,
   type ApiStageChange
@@ -178,6 +179,7 @@ function ApplicationsInner() {
   >([]);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [coverLetterText, setCoverLetterText] = useState<string | null>(null);
 
   // Reminders
   const [reminderApp, setReminderApp] = useState<ApiApplication | null>(null);
@@ -410,6 +412,7 @@ function ApplicationsInner() {
     if (!viewingApp) return;
     setCoverJD(viewingApp.jobDescription ?? "");
     setAiError(null);
+    setCoverLetterText(null);
     setShowCoverDialog(true);
   };
 
@@ -431,12 +434,12 @@ function ApplicationsInner() {
     setAiBusy(true);
     setAiError(null);
     try {
-      await api.post("/job-tracker/ai/cover-letter", {
+      const result = await api.post<{ text?: string; coverLetterText?: string }>("/job-tracker/ai/cover-letter", {
         applicationId: viewingApp.id,
         jobDescription: coverJD
       });
-      setShowCoverDialog(false);
-      window.alert("Cover letter generated. Check your downloads or the AI section.");
+      const text = result?.text ?? result?.coverLetterText ?? null;
+      setCoverLetterText(text);
     } catch (e) {
       setAiError((e as Error).message);
     } finally {
@@ -1143,6 +1146,17 @@ function ApplicationsInner() {
                   <em>{aiError}</em>
                 </p>
               ) : null}
+              {coverLetterText ? (
+                <div className="field" style={{ marginTop: 16 }}>
+                  <label>Generated cover letter</label>
+                  <pre
+                    className="ai-textarea"
+                    style={{ whiteSpace: "pre-wrap", maxHeight: 320, overflowY: "auto" }}
+                  >
+                    {coverLetterText}
+                  </pre>
+                </div>
+              ) : null}
             </div>
             <div className="ai-modal-foot">
               <button
@@ -1152,6 +1166,22 @@ function ApplicationsInner() {
               >
                 Close
               </button>
+              {coverLetterText ? (
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => {
+                    if (!viewingApp || !coverLetterText) return;
+                    downloadPDF(
+                      "/job-tracker/ai/cover-letter/pdf",
+                      { text: coverLetterText, company: viewingApp.company, role: viewingApp.role },
+                      "cover-letter.pdf"
+                    ).catch((e: Error) => window.alert(`Download failed: ${e.message}`));
+                  }}
+                >
+                  <DownloadIcon width={13} height={13} /> Download PDF
+                </button>
+              ) : null}
               <button
                 className="primary-button"
                 type="button"
@@ -1325,6 +1355,19 @@ function ApplicationsInner() {
                       onClick={() => continueFromTweak(tweakResult.id)}
                     >
                       Continue tweaking this version
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={() => {
+                        downloadPDF(
+                          `/job-tracker/ai/resume/tweaks/${tweakResult.id}/pdf`,
+                          null,
+                          "resume-tweak.pdf"
+                        ).catch((e: Error) => window.alert(`Download failed: ${e.message}`));
+                      }}
+                    >
+                      <DownloadIcon width={13} height={13} /> Download PDF
                     </button>
                   </div>
                 </div>

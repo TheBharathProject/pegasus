@@ -398,3 +398,29 @@ export type ApiApplicationPage = {
   items: ApiApplication[];
   nextCursor?: string;
 };
+
+export async function downloadPDF(
+  endpoint: string,
+  body: Record<string, unknown> | null,
+  filename: string
+): Promise<void> {
+  const token = getToken();
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8000";
+  const opts: RequestInit = {
+    method: body !== null ? "POST" : "GET",
+    headers: {
+      Authorization: `Bearer ${token ?? ""}`,
+      ...(body !== null ? { "Content-Type": "application/json" } : {}),
+    },
+    ...(body !== null ? { body: JSON.stringify(body) } : {}),
+  };
+  const res = await fetch(`${base}${endpoint}`, opts);
+  if (!res.ok) throw new Error(`PDF download failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
