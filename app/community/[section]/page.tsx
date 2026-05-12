@@ -32,12 +32,29 @@ import { api } from "@/lib/api-client";
 
 type SectionKey = "reviews" | "experiences" | "referrals" | "ask" | "recruiters";
 
+// These must be declared before sectionMeta because filterSelects spreads them.
+const OUTCOMES = ["Offer", "Reject", "Ghosted", "InProgress", "Withdrew"];
+const OUTCOME_LABELS: Record<string, string> = {
+  Offer: "Offer",
+  Reject: "Rejected",
+  Ghosted: "Ghosted",
+  InProgress: "In Progress",
+  Withdrew: "Withdrew"
+};
+const TARGET_ROLES = ["SDE", "PM", "Data Science", "Design", "DevOps", "QA", "Other"];
+const EXPERIENCE_LEVELS = ["Fresher", "Junior (0-2)", "Mid (2-5)", "Senior (5+)", "Lead (8+)"];
+
+type FilterSelectDef = {
+  key: string;
+  options: Array<{ label: string; value: string }>;
+};
+
 const sectionMeta: Record<SectionKey, {
   title: string;
   intro: string;
   countNoun: string;
   primaryLabel: string;
-  filters: string[];
+  filterSelects: FilterSelectDef[];
   searchPlaceholder?: string;
   emptyTitle: string;
   emptyBody: string;
@@ -48,7 +65,21 @@ const sectionMeta: Record<SectionKey, {
     intro: "Upload a resume for critique and filter the feed by role and seniority.",
     countNoun: "reviews",
     primaryLabel: "Post your resume",
-    filters: ["Newest", "All Roles", "All Levels"],
+    filterSelects: [
+      { key: "sort", options: [
+        { label: "Newest", value: "" },
+        { label: "Most Upvoted", value: "votes" },
+        { label: "Most Reviewed", value: "most-reviewed" },
+      ]},
+      { key: "role", options: [
+        { label: "All Roles", value: "" },
+        ...TARGET_ROLES.map((r) => ({ label: r, value: r })),
+      ]},
+      { key: "level", options: [
+        { label: "All Levels", value: "" },
+        ...EXPERIENCE_LEVELS.map((l) => ({ label: l, value: l })),
+      ]},
+    ],
     searchPlaceholder: "Search reviews…",
     emptyTitle: "No reviews yet",
     emptyBody: "Be the first to post your resume for review. Get feedback from the community.",
@@ -59,7 +90,16 @@ const sectionMeta: Record<SectionKey, {
     intro: "Real hiring loops with outcomes, round counts, location context, and community voting.",
     countNoun: "experiences shared by the community",
     primaryLabel: "Share",
-    filters: ["Newest", "All Outcomes"],
+    filterSelects: [
+      { key: "sort", options: [
+        { label: "Newest", value: "" },
+        { label: "Most Upvoted", value: "votes" },
+      ]},
+      { key: "outcome", options: [
+        { label: "All Outcomes", value: "" },
+        ...OUTCOMES.map((o) => ({ label: OUTCOME_LABELS[o] ?? o, value: o })),
+      ]},
+    ],
     searchPlaceholder: "Search company or role…",
     emptyTitle: "No experiences yet",
     emptyBody: "Share an interview loop you've been through to help others know what to expect.",
@@ -70,7 +110,14 @@ const sectionMeta: Record<SectionKey, {
     intro: "A dedicated route for referral requests and profile checks.",
     countNoun: "open referrals",
     primaryLabel: "Offer Referral",
-    filters: ["Newest", "All Companies", "All Roles"],
+    filterSelects: [
+      { key: "sort", options: [
+        { label: "Newest", value: "" },
+        { label: "Most Upvoted", value: "votes" },
+      ]},
+      { key: "company", options: [{ label: "All Companies", value: "" }] },
+      { key: "role", options: [{ label: "All Roles", value: "" }] },
+    ],
     searchPlaceholder: "Search company or role…",
     emptyTitle: "No referrals yet.",
     emptyBody: "Have a role you can refer for? Post it here so the community can apply.",
@@ -81,7 +128,18 @@ const sectionMeta: Record<SectionKey, {
     intro: "Career questions with tags for salary, negotiation, interview prep, and work-life decisions.",
     countNoun: "questions",
     primaryLabel: "Ask",
-    filters: ["Newest", "All Tags"],
+    filterSelects: [
+      { key: "sort", options: [
+        { label: "Newest", value: "" },
+        { label: "Most Upvoted", value: "votes" },
+        { label: "Most Answered", value: "most-answered" },
+        { label: "Unanswered", value: "unanswered" },
+      ]},
+      { key: "tag", options: [
+        { label: "All Tags", value: "" },
+        ...askTags.map((t) => ({ label: t, value: t })),
+      ]},
+    ],
     searchPlaceholder: "Search questions…",
     emptyTitle: "No questions yet.",
     emptyBody: "Ask anything about job hunting, negotiation, interviews — the community will weigh in.",
@@ -92,7 +150,14 @@ const sectionMeta: Record<SectionKey, {
     intro: "A community directory for recruiter names, companies, and shared context.",
     countNoun: "recruiters contributed by the community",
     primaryLabel: "Add Recruiter",
-    filters: ["Most Upvoted", "All Companies"],
+    filterSelects: [
+      { key: "sort", options: [
+        { label: "Most Upvoted", value: "" },
+        { label: "Newest", value: "newest" },
+        { label: "Most Reviewed", value: "most-reviewed" },
+        { label: "Most Trusted", value: "trusted" },
+      ]},
+    ],
     searchPlaceholder: "Search name or company…",
     emptyTitle: "No recruiters listed yet",
     emptyBody: "Add a recruiter you've worked with to help others map the hiring landscape.",
@@ -116,31 +181,7 @@ const ROUND_TYPES = [
   "Culture Fit",
   "Other"
 ];
-const OUTCOMES = ["Offer", "Reject", "Ghosted", "InProgress", "Withdrew"];
-const OUTCOME_LABELS: Record<string, string> = {
-  Offer: "Offer",
-  Reject: "Rejected",
-  Ghosted: "Ghosted",
-  InProgress: "In Progress",
-  Withdrew: "Withdrew"
-};
 const DIFFICULTIES = ["Easy", "Medium", "Hard"];
-const TARGET_ROLES = [
-  "SDE",
-  "PM",
-  "Data Science",
-  "Design",
-  "DevOps",
-  "QA",
-  "Other"
-];
-const EXPERIENCE_LEVELS = [
-  "Fresher",
-  "Junior (0-2)",
-  "Mid (2-5)",
-  "Senior (5+)",
-  "Lead (8+)"
-];
 const SPECIALIZATIONS = [
   "Backend",
   "Frontend",
@@ -480,56 +521,24 @@ export default function CommunitySectionPage() {
         </div>
       ) : null}
 
-      <div className="filters">
-        {meta.filters.map((filter) => {
-          // Map display labels to (key, value) pairs for URL state.
-          // Sort tabs: "Newest" → sort=newest, "Most Upvoted" → sort=votes,
-          // "Most Reviewed" → sort=most-reviewed. Outcome/role/level/tag
-          // filters clear their key when the "All …" sentinel is clicked.
-          let filterKey = "";
-          let filterValue = "";
-          if (filter === "Newest") { filterKey = "sort"; filterValue = "newest"; }
-          else if (filter === "Most Upvoted") { filterKey = "sort"; filterValue = "votes"; }
-          else if (filter === "Most Reviewed") { filterKey = "sort"; filterValue = "most-reviewed"; }
-          else if (filter === "All Outcomes") { filterKey = "outcome"; filterValue = ""; }
-          else if (filter === "All Roles") { filterKey = "role"; filterValue = ""; }
-          else if (filter === "All Levels") { filterKey = "level"; filterValue = ""; }
-          else if (filter === "All Companies") { filterKey = "company"; filterValue = ""; }
-          else if (filter === "All Tags") { filterKey = "tag"; filterValue = ""; }
-
-          const activeValue = filterKey ? searchParams.get(filterKey) : null;
-          const isActive =
-            filterKey === "sort"
-              ? activeValue === filterValue || (!activeValue && filter === "Newest")
-              : filterKey && filterValue === ""
-                ? !searchParams.get(filterKey)
-                : filterKey
-                  ? activeValue === filterValue
-                  : false;
-
-          return (
-            <button
-              type="button"
-              className={isActive ? "filter-box is-active" : "filter-box"}
-              key={filter}
-              onClick={() => {
-                if (!filterKey) return;
-                if (isActive) {
-                  if (filterKey === "sort" && filterValue !== "newest") {
-                    setFilter("sort", "newest");
-                  } else if (filterKey !== "sort" && filterValue !== "") {
-                    setFilter(filterKey, "");
-                  }
-                } else {
-                  setFilter(filterKey, filterValue);
-                }
-              }}
-            >
-              {filter}
-            </button>
-          );
-        })}
-      </div>
+      {meta.filterSelects.length > 0 ? (
+        <div className="filter-row">
+          {meta.filterSelects.map((sel) => (
+            <div className="filter-select-wrap" key={sel.key}>
+              <select
+                className="filter-select"
+                value={searchParams.get(sel.key) ?? ""}
+                onChange={(e) => setFilter(sel.key, e.target.value)}
+              >
+                {sel.options.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <span className="filter-select-chevron" aria-hidden="true">▾</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {section === "ask" ? (
         <div className="tag-row">

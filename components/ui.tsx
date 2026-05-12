@@ -120,9 +120,19 @@ export function ModalShell({
           aria-labelledby={titleId}
           style={{ width, maxWidth: "calc(100vw - 2rem)" }}
         >
-          <h2 id={titleId} className="modal-title">
-            {title}
-          </h2>
+          <div className="modal-head">
+            <h2 id={titleId}>{title}</h2>
+            <button
+              className="modal-close"
+              type="button"
+              onClick={onClose}
+              aria-label="Close dialog"
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                <path d="M1 1l11 11M12 1L1 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
           {children}
         </div>
       </FocusScope>

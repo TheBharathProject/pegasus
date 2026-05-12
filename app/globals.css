@@ -1469,6 +1469,42 @@ html[data-sb="collapsed"] .signout-icon {
   line-height: 1.15;
 }
 
+/* Compact flex header: title left, × close button right */
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.modal-head h2 {
+  font-family: var(--font-sans-stack);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.modal-close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.modal-close:hover {
+  background: var(--bg-soft);
+  color: var(--text);
+}
+
 /* Italic-serif subhead used right under the modal h2.  */
 .modal-intro {
   margin-top: 6px;
@@ -5179,7 +5215,53 @@ html[data-sb="collapsed"] .signout-icon {
   cursor: pointer;
 }
 
-/* FILTERS / COMMUNITY */
+/* FILTERS / COMMUNITY — select dropdown row */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  align-items: center;
+}
+
+.filter-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.filter-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 7px 30px 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-soft);
+  color: var(--text-soft);
+  font-size: 12.5px;
+  font-family: var(--font-sans-stack);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 140ms ease, color 140ms ease;
+  min-width: 0;
+}
+
+.filter-select:focus,
+.filter-select:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.filter-select-chevron {
+  position: absolute;
+  right: 9px;
+  pointer-events: none;
+  color: var(--text-faint);
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* legacy pill buttons (kept for backwards compat with any remaining usages) */
 .filters {
   display: flex;
   flex-wrap: wrap;

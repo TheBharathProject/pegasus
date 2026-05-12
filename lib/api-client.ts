@@ -379,6 +379,7 @@ export type ApiRecruiter = {
   email: string;
   company?: string;
   linkedinUrl?: string;
+  phone?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;

@@ -13,6 +13,7 @@ const EMPTY_DRAFT = {
   email: "",
   company: "",
   linkedinUrl: "",
+  phone: "",
   notes: ""
 };
 
@@ -71,6 +72,7 @@ export default function RecruitersPage() {
       email: r.email,
       company: r.company ?? "",
       linkedinUrl: r.linkedinUrl ?? "",
+      phone: r.phone ?? "",
       notes: r.notes ?? ""
     });
     setFormError(null);
@@ -99,6 +101,7 @@ export default function RecruitersPage() {
         email: draft.email.trim(),
         company: draft.company.trim() || undefined,
         linkedinUrl: draft.linkedinUrl.trim() || undefined,
+        phone: draft.phone.trim() || undefined,
         notes: draft.notes.trim() || undefined
       };
       if (editingId) {
@@ -245,19 +248,19 @@ export default function RecruitersPage() {
       >
         <div className="form-grid">
           <div className="field">
-            <label>Name *</label>
+            <label>Name <span style={{ color: "var(--danger)" }}>*</span></label>
             <input
               autoFocus
-              placeholder="Jane Doe"
+              placeholder="Anya Sharma"
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             />
           </div>
           <div className="field">
-            <label>Email *</label>
+            <label>Email <span style={{ color: "var(--danger)" }}>*</span></label>
             <input
               type="email"
-              placeholder="jane@company.com"
+              placeholder="anya@stripe.com"
               value={draft.email}
               onChange={(e) => setDraft({ ...draft, email: e.target.value })}
             />
@@ -265,7 +268,7 @@ export default function RecruitersPage() {
           <div className="field">
             <label>Company</label>
             <input
-              placeholder="Acme Corp"
+              placeholder="Stripe"
               value={draft.company}
               onChange={(e) => setDraft({ ...draft, company: e.target.value })}
             />
@@ -274,17 +277,26 @@ export default function RecruitersPage() {
             <label>LinkedIn URL</label>
             <input
               type="url"
-              placeholder="https://linkedin.com/in/jane"
+              placeholder="https://linkedin.com/in/…"
               value={draft.linkedinUrl}
               onChange={(e) => setDraft({ ...draft, linkedinUrl: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Phone</label>
+            <input
+              type="tel"
+              placeholder="+91 98765 43210"
+              value={draft.phone}
+              onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
             />
           </div>
           <div className="field" style={{ gridColumn: "1 / -1" }}>
             <label>Notes</label>
             <textarea
               className="feedback-box"
-              placeholder="Context about this recruiter…"
-              rows={3}
+              placeholder="How you connected, what they hire for, conversation context…"
+              rows={4}
               value={draft.notes}
               onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
             />
