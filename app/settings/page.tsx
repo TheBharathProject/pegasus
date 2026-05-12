@@ -4,16 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ProductFrame } from "@/components/frames";
 import {
-  CloseIcon,
   GlobeIcon,
   HistoryIcon,
   MonitorIcon,
   MoonIcon,
-  SettingsIcon,
   SparkleStarIcon,
   SunIcon,
   TrashIcon
 } from "@/components/icons";
+import { ModalShell } from "@/components/ui";
 import { api, type ApiUser, type ApiProfile, type ApiAPIToken, type ApiBillingMe } from "@/lib/api-client";
 import { fetchBillingMe } from "@/lib/billing";
 import { isAuthed, clearToken } from "@/lib/auth";
@@ -1130,112 +1129,75 @@ export default function SettingsPage() {
         </article>
       </section>
 
-      {showCancel ? (
-        <div
-          className="modal-backdrop"
-          onClick={() => {
-            setShowCancel(false);
-            setDeleteConfirm("");
+      <ModalShell
+        open={showCancel}
+        onClose={() => {
+          setShowCancel(false);
+          setDeleteConfirm("");
+        }}
+        title="Delete your account?"
+        titleId="delete-account-title"
+        width="460px"
+      >
+        <p
+          className="muted"
+          style={{
+            marginTop: 12,
+            fontFamily: "var(--font-serif-stack)",
+            fontStyle: "italic"
           }}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-account-title"
         >
-          <div
-            className="modal-card"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: 460 }}
-          >
-            <div className="list-head">
-              <h2 id="delete-account-title">Delete your account?</h2>
-              <button
-                className="icon-button"
-                aria-label="Close"
-                type="button"
-                onClick={() => {
-                  setShowCancel(false);
-                  setDeleteConfirm("");
-                }}
-              >
-                <CloseIcon width={14} height={14} />
-              </button>
-            </div>
-            <p
-              className="muted"
-              style={{
-                marginTop: 12,
-                fontFamily: "var(--font-serif-stack)",
-                fontStyle: "italic"
-              }}
-            >
-              This wipes every application, note, resume, and profile field tied to
-              your account. Cannot be undone. Your sign-in (Google) stays — you can
-              start over later if you want, but the data is gone.
-            </p>
-            <div className="field" style={{ marginTop: 18 }}>
-              <label>Type <strong>delete</strong> to confirm</label>
-              <input
-                value={deleteConfirm}
-                onChange={(e) => setDeleteConfirm(e.target.value)}
-                placeholder="delete"
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </div>
-            <div className="section-actions" style={{ justifyContent: "flex-end" }}>
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => {
-                  setShowCancel(false);
-                  setDeleteConfirm("");
-                }}
-              >
-                Keep account
-              </button>
-              <button
-                className="primary-button"
-                type="button"
-                onClick={handleDeleteAccount}
-                disabled={
-                  deleteConfirm.trim().toLowerCase() !== "delete" || deleting
-                }
-              >
-                {deleting ? "Deleting…" : "Delete forever"}
-              </button>
-            </div>
-          </div>
+          This wipes every application, note, resume, and profile field tied to
+          your account. Cannot be undone. Your sign-in (Google) stays — you can
+          start over later if you want, but the data is gone.
+        </p>
+        <div className="field" style={{ marginTop: 18 }}>
+          <label>Type <strong>delete</strong> to confirm</label>
+          <input
+            value={deleteConfirm}
+            onChange={(e) => setDeleteConfirm(e.target.value)}
+            placeholder="delete"
+            autoComplete="off"
+            spellCheck={false}
+          />
         </div>
-      ) : null}
+        <div className="section-actions" style={{ justifyContent: "flex-end" }}>
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() => {
+              setShowCancel(false);
+              setDeleteConfirm("");
+            }}
+          >
+            Keep account
+          </button>
+          <button
+            className="primary-button"
+            type="button"
+            onClick={handleDeleteAccount}
+            disabled={
+              deleteConfirm.trim().toLowerCase() !== "delete" || deleting
+            }
+          >
+            {deleting ? "Deleting…" : "Delete forever"}
+          </button>
+        </div>
+      </ModalShell>
 
       {/* Cancel-subscription confirmation modal. Surfaces the
           period-end date so the user knows exactly when premium lapses,
           and frames "what stays accessible" so cancellation feels less
           like a cliff. Replaces the prior window.confirm. */}
-      {showCancelModal && billing?.premium && billing.premium.kind === "recurring" ? (
-        <div
-          className="modal-backdrop"
-          onClick={() => setShowCancelModal(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="cancel-sub-title"
-        >
-          <div
-            className="modal-card"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: 480 }}
-          >
-            <div className="list-head">
-              <h2 id="cancel-sub-title">Cancel auto-renewal?</h2>
-              <button
-                className="icon-button"
-                aria-label="Close"
-                type="button"
-                onClick={() => setShowCancelModal(false)}
-              >
-                <CloseIcon width={14} height={14} />
-              </button>
-            </div>
+      <ModalShell
+        open={showCancelModal && !!billing?.premium && billing.premium.kind === "recurring"}
+        onClose={() => setShowCancelModal(false)}
+        title="Cancel auto-renewal?"
+        titleId="cancel-sub-title"
+        width="480px"
+      >
+        {billing?.premium && billing.premium.kind === "recurring" ? (
+          <>
             <p
               className="muted"
               style={{
@@ -1281,9 +1243,9 @@ export default function SettingsPage() {
                 {billingBusy ? "Cancelling…" : "Cancel auto-renewal"}
               </button>
             </div>
-          </div>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </ModalShell>
     </ProductFrame>
   );
 }

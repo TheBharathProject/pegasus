@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { notFound, useParams, useRouter, useSearchParams } from "next/navigation";
 import { ProductFrame, CommunityTabs } from "@/components/frames";
+import { ModalShell } from "@/components/ui";
 import {
   ChatIcon,
   CloseIcon,
@@ -636,39 +637,7 @@ function CommunityEmpty({
   );
 }
 
-// ---- Modal shell + actions -----------------------------------------------
-
-function ModalShell({
-  title,
-  intro,
-  size,
-  children,
-  onClose
-}: {
-  title: string;
-  intro?: string;
-  size?: "default" | "lg";
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
-  return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={onClose}>
-      <div
-        className={size === "lg" ? "modal-card modal-card--lg" : "modal-card"}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="list-head">
-          <h2>{title}</h2>
-          <button className="icon-button" aria-label="Close" onClick={onClose} type="button">
-            <CloseIcon width={14} height={14} />
-          </button>
-        </div>
-        {intro ? <p className="modal-intro">{intro}</p> : null}
-        {children}
-      </div>
-    </div>
-  );
-}
+// ---- Modal actions -------------------------------------------------------
 
 function ModalActions({
   onCancel,
@@ -716,8 +685,8 @@ function ReviewModal({
 
   return (
     <ModalShell
+      open={true}
       title="Post Resume for Review"
-      intro="Upload a screenshot or select from your vault to get structured feedback."
       onClose={onClose}
     >
       <div className="form-grid">
@@ -885,9 +854,9 @@ function ExperienceModal({
 
   return (
     <ModalShell
+      open={true}
       title="Share Interview Experience"
-      intro="Help others by sharing what the interview process was really like."
-      size="lg"
+      width="720px"
       onClose={onClose}
     >
       <div className="form-grid">
@@ -1089,8 +1058,8 @@ function ReferralModal({
 
   return (
     <ModalShell
+      open={true}
       title="Offer a Referral"
-      intro="Help someone land a job at your company."
       onClose={onClose}
     >
       <div className="form-grid">
@@ -1232,7 +1201,7 @@ function AskModal({
   const valid = questionLen >= MIN_QUESTION && questionLen <= MAX_QUESTION;
 
   return (
-    <ModalShell title="Ask the Community" onClose={onClose}>
+    <ModalShell open={true} title="Ask the Community" onClose={onClose}>
       <div className="form-grid">
         <div className="field wide">
           <label>Question *</label>
@@ -1338,7 +1307,7 @@ function RecruiterModal({
   const valid = !!draft.recruiter.trim() && !!draft.company.trim();
 
   return (
-    <ModalShell title="Add a Recruiter" onClose={onClose}>
+    <ModalShell open={true} title="Add a Recruiter" onClose={onClose}>
       <div className="form-grid">
         <div className="field wide">
           <label>Name *</label>

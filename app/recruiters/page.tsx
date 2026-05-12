@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { ProductFrame } from "@/components/frames";
-import { CloseIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/icons";
+import { ModalShell } from "@/components/ui";
+import { PencilIcon, PlusIcon, TrashIcon } from "@/components/icons";
 import { api, type ApiRecruiter } from "@/lib/api-client";
 import { isAuthed } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
@@ -230,91 +231,78 @@ export default function RecruitersPage() {
         )}
       </section>
 
-      {showModal ? (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="recruiter-modal-title"
-          onClick={closeModal}
-        >
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="list-head">
-              <h2 id="recruiter-modal-title">
-                {editingId ? "Edit recruiter" : "Add recruiter"}
-              </h2>
-              <button className="icon-button" aria-label="Close" type="button" onClick={closeModal}>
-                <CloseIcon width={14} height={14} />
-              </button>
-            </div>
-            <div className="form-grid">
-              <div className="field">
-                <label>Name *</label>
-                <input
-                  autoFocus
-                  placeholder="Jane Doe"
-                  value={draft.name}
-                  onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>Email *</label>
-                <input
-                  type="email"
-                  placeholder="jane@company.com"
-                  value={draft.email}
-                  onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>Company</label>
-                <input
-                  placeholder="Acme Corp"
-                  value={draft.company}
-                  onChange={(e) => setDraft({ ...draft, company: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>LinkedIn URL</label>
-                <input
-                  type="url"
-                  placeholder="https://linkedin.com/in/jane"
-                  value={draft.linkedinUrl}
-                  onChange={(e) => setDraft({ ...draft, linkedinUrl: e.target.value })}
-                />
-              </div>
-              <div className="field" style={{ gridColumn: "1 / -1" }}>
-                <label>Notes</label>
-                <textarea
-                  className="feedback-box"
-                  placeholder="Context about this recruiter…"
-                  rows={3}
-                  value={draft.notes}
-                  onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
-                />
-              </div>
-              {formError ? (
-                <p className="muted small" style={{ color: "var(--danger)", gridColumn: "1 / -1" }}>
-                  {formError}
-                </p>
-              ) : null}
-            </div>
-            <div className="ai-modal-foot">
-              <button className="ghost-button" type="button" onClick={closeModal}>
-                Cancel
-              </button>
-              <button
-                className="primary-button"
-                type="button"
-                disabled={busy}
-                onClick={() => void handleSave()}
-              >
-                {busy ? "Saving…" : editingId ? "Save changes" : "Add recruiter"}
-              </button>
-            </div>
+      <ModalShell
+        open={showModal}
+        onClose={closeModal}
+        title={editingId ? "Edit recruiter" : "Add recruiter"}
+        titleId="recruiter-modal-title"
+      >
+        <div className="form-grid">
+          <div className="field">
+            <label>Name *</label>
+            <input
+              autoFocus
+              placeholder="Jane Doe"
+              value={draft.name}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+            />
           </div>
+          <div className="field">
+            <label>Email *</label>
+            <input
+              type="email"
+              placeholder="jane@company.com"
+              value={draft.email}
+              onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Company</label>
+            <input
+              placeholder="Acme Corp"
+              value={draft.company}
+              onChange={(e) => setDraft({ ...draft, company: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>LinkedIn URL</label>
+            <input
+              type="url"
+              placeholder="https://linkedin.com/in/jane"
+              value={draft.linkedinUrl}
+              onChange={(e) => setDraft({ ...draft, linkedinUrl: e.target.value })}
+            />
+          </div>
+          <div className="field" style={{ gridColumn: "1 / -1" }}>
+            <label>Notes</label>
+            <textarea
+              className="feedback-box"
+              placeholder="Context about this recruiter…"
+              rows={3}
+              value={draft.notes}
+              onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+            />
+          </div>
+          {formError ? (
+            <p className="muted small" style={{ color: "var(--danger)", gridColumn: "1 / -1" }}>
+              {formError}
+            </p>
+          ) : null}
         </div>
-      ) : null}
+        <div className="ai-modal-foot">
+          <button className="ghost-button" type="button" onClick={closeModal}>
+            Cancel
+          </button>
+          <button
+            className="primary-button"
+            type="button"
+            disabled={busy}
+            onClick={() => void handleSave()}
+          >
+            {busy ? "Saving…" : editingId ? "Save changes" : "Add recruiter"}
+          </button>
+        </div>
+      </ModalShell>
     </ProductFrame>
   );
 }

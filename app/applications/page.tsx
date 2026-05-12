@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductFrame } from "@/components/frames";
-import { MetricCard, Pill } from "@/components/ui";
+import { MetricCard, ModalShell, Pill } from "@/components/ui";
 import { ApplicationTimeline } from "@/components/timeline";
 import { ImportModal } from "@/components/import-modal";
 import {
@@ -810,18 +810,15 @@ function ApplicationsInner() {
         </section>
       )}
 
-      {viewingApp ? (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="app-detail-title"
-          onClick={closeView}
-        >
-          <div
-            className="modal-card modal-card--wide"
-            onClick={(e) => e.stopPropagation()}
-          >
+      <ModalShell
+        open={!!viewingApp}
+        onClose={closeView}
+        title={viewingApp?.company ?? ""}
+        titleId="app-detail-title"
+        width="780px"
+      >
+        {viewingApp ? (
+          <>
             <button
               className="icon-button app-detail-close"
               aria-label="Close"
@@ -833,7 +830,6 @@ function ApplicationsInner() {
 
             <header className="app-detail-head">
               <p className="eyebrow">Application</p>
-              <h2 id="app-detail-title" className="app-detail-title">{viewingApp.company}</h2>
               <p className="app-detail-sub">{viewingApp.role}</p>
               <div className="app-detail-tags">
                 <Pill tone={STAGE_TONES[viewingApp.stage] || "default"}>
@@ -960,166 +956,141 @@ function ApplicationsInner() {
                 </section>
               </aside>
             </div>
+          </>
+        ) : null}
+      </ModalShell>
+
+      <ModalShell
+        open={showModal}
+        onClose={closeModal}
+        title={editingId ? "Edit application" : "New application"}
+        titleId="app-form-title"
+      >
+        <div className="form-grid">
+          <div className="field">
+            <label>Company *</label>
+            <input
+              placeholder="Stripe"
+              value={draft.company}
+              onChange={(e) => setDraft({ ...draft, company: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Role *</label>
+            <input
+              placeholder="Senior Engineer"
+              value={draft.role}
+              onChange={(e) => setDraft({ ...draft, role: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Stage</label>
+            <select value={draft.stage} onChange={(e) => setDraft({ ...draft, stage: e.target.value })}>
+              {STAGES.map((s) => (
+                <option key={s} value={s}>
+                  {STAGE_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>Source</label>
+            {/* Values match the server-side enum (UPPERCASE) introduced
+                by the source validator in handlers_applications.go +
+                the CHECK constraint in migrations/0016. Labels are
+                title-case for readability. Empty value ("—") submits
+                as null/empty, which the backend accepts. */}
+            <select value={draft.source} onChange={(e) => setDraft({ ...draft, source: e.target.value })}>
+              <option value="">—</option>
+              <option value="LINKEDIN">LinkedIn</option>
+              <option value="NAUKRI">Naukri</option>
+              <option value="REFERRAL">Referral</option>
+              <option value="COMPANY_SITE">Company site</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div className="field">
+            <label>Applied date</label>
+            <input
+              type="date"
+              value={draft.appliedAt}
+              onChange={(e) => setDraft({ ...draft, appliedAt: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Last date to apply</label>
+            <input
+              type="date"
+              value={draft.applyDeadline}
+              onChange={(e) => setDraft({ ...draft, applyDeadline: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Location</label>
+            <input
+              placeholder="Remote · Bangalore"
+              value={draft.location}
+              onChange={(e) => setDraft({ ...draft, location: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Salary range</label>
+            <input
+              placeholder="e.g. 15 LPA, $120k, €90k"
+              value={draft.salaryRange}
+              onChange={(e) => setDraft({ ...draft, salaryRange: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Job link</label>
+            <input
+              type="url"
+              placeholder="https://..."
+              value={draft.jobLink}
+              onChange={(e) => setDraft({ ...draft, jobLink: e.target.value })}
+            />
+          </div>
+          <div className="field wide">
+            <label>Job description</label>
+            <textarea
+              placeholder="Paste the JD here..."
+              value={draft.jobDescription}
+              onChange={(e) => setDraft({ ...draft, jobDescription: e.target.value })}
+            />
+          </div>
+          <div className="field wide">
+            <label>Notes</label>
+            <textarea
+              placeholder="What stood out, contacts, prep tasks..."
+              value={draft.notes}
+              onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+            />
           </div>
         </div>
-      ) : null}
-
-      {showModal ? (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="app-form-title"
-          onClick={closeModal}
-        >
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="list-head">
-              <h2 id="app-form-title">{editingId ? "Edit application" : "New application"}</h2>
-              <button className="icon-button" aria-label="Close" onClick={closeModal} type="button">
-                <CloseIcon width={14} height={14} />
-              </button>
-            </div>
-            <div className="form-grid">
-              <div className="field">
-                <label>Company *</label>
-                <input
-                  placeholder="Stripe"
-                  value={draft.company}
-                  onChange={(e) => setDraft({ ...draft, company: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>Role *</label>
-                <input
-                  placeholder="Senior Engineer"
-                  value={draft.role}
-                  onChange={(e) => setDraft({ ...draft, role: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>Stage</label>
-                <select value={draft.stage} onChange={(e) => setDraft({ ...draft, stage: e.target.value })}>
-                  {STAGES.map((s) => (
-                    <option key={s} value={s}>
-                      {STAGE_LABELS[s]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label>Source</label>
-                {/* Values match the server-side enum (UPPERCASE) introduced
-                    by the source validator in handlers_applications.go +
-                    the CHECK constraint in migrations/0016. Labels are
-                    title-case for readability. Empty value ("—") submits
-                    as null/empty, which the backend accepts. */}
-                <select value={draft.source} onChange={(e) => setDraft({ ...draft, source: e.target.value })}>
-                  <option value="">—</option>
-                  <option value="LINKEDIN">LinkedIn</option>
-                  <option value="NAUKRI">Naukri</option>
-                  <option value="REFERRAL">Referral</option>
-                  <option value="COMPANY_SITE">Company site</option>
-                  <option value="OTHER">Other</option>
-                </select>
-              </div>
-              <div className="field">
-                <label>Applied date</label>
-                <input
-                  type="date"
-                  value={draft.appliedAt}
-                  onChange={(e) => setDraft({ ...draft, appliedAt: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>Last date to apply</label>
-                <input
-                  type="date"
-                  value={draft.applyDeadline}
-                  onChange={(e) => setDraft({ ...draft, applyDeadline: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>Location</label>
-                <input
-                  placeholder="Remote · Bangalore"
-                  value={draft.location}
-                  onChange={(e) => setDraft({ ...draft, location: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>Salary range</label>
-                <input
-                  placeholder="e.g. 15 LPA, $120k, €90k"
-                  value={draft.salaryRange}
-                  onChange={(e) => setDraft({ ...draft, salaryRange: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>Job link</label>
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={draft.jobLink}
-                  onChange={(e) => setDraft({ ...draft, jobLink: e.target.value })}
-                />
-              </div>
-              <div className="field wide">
-                <label>Job description</label>
-                <textarea
-                  placeholder="Paste the JD here..."
-                  value={draft.jobDescription}
-                  onChange={(e) => setDraft({ ...draft, jobDescription: e.target.value })}
-                />
-              </div>
-              <div className="field wide">
-                <label>Notes</label>
-                <textarea
-                  placeholder="What stood out, contacts, prep tasks..."
-                  value={draft.notes}
-                  onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="section-actions" style={{ justifyContent: "flex-end" }}>
-              <button className="ghost-button" onClick={closeModal} type="button">
-                Cancel
-              </button>
-              <button
-                className="primary-button"
-                onClick={handleSave}
-                disabled={!draft.company.trim() || !draft.role.trim()}
-                type="button"
-              >
-                {editingId ? "Save changes" : "Save application"}
-              </button>
-            </div>
-          </div>
+        <div className="section-actions" style={{ justifyContent: "flex-end" }}>
+          <button className="ghost-button" onClick={closeModal} type="button">
+            Cancel
+          </button>
+          <button
+            className="primary-button"
+            onClick={handleSave}
+            disabled={!draft.company.trim() || !draft.role.trim()}
+            type="button"
+          >
+            {editingId ? "Save changes" : "Save application"}
+          </button>
         </div>
-      ) : null}
+      </ModalShell>
 
-      {showCoverDialog && viewingApp ? (
-        <div
-          className="modal-backdrop ai-modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="cover-letter-title"
-          onClick={() => setShowCoverDialog(false)}
-        >
-          <div className="modal-card ai-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="list-head">
-              <h2 id="cover-letter-title">
-                Cover letter — <em className="ai-modal-subject">{viewingApp.role}</em> at{" "}
-                <em className="ai-modal-subject">{viewingApp.company}</em>
-              </h2>
-              <button
-                className="icon-button"
-                aria-label="Close"
-                onClick={() => setShowCoverDialog(false)}
-                type="button"
-              >
-                <CloseIcon width={14} height={14} />
-              </button>
-            </div>
+      <ModalShell
+        open={showCoverDialog && !!viewingApp}
+        onClose={() => setShowCoverDialog(false)}
+        title={viewingApp ? `Cover letter — ${viewingApp.role} at ${viewingApp.company}` : "Cover letter"}
+        titleId="cover-letter-title"
+        width="600px"
+      >
+        {viewingApp ? (
+          <>
             <div className="ai-modal-body">
               <div className="field">
                 <label>
@@ -1192,30 +1163,19 @@ function ApplicationsInner() {
                 {aiBusy ? "Generating…" : "Generate"}
               </button>
             </div>
-          </div>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </ModalShell>
 
-      {showTweakDialog && viewingApp ? (
-        <div
-          className="modal-backdrop ai-modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="tweak-title"
-          onClick={() => setShowTweakDialog(false)}
-        >
-          <div className="modal-card ai-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="list-head">
-              <h2 id="tweak-title">Tweak resume as per job description</h2>
-              <button
-                className="icon-button"
-                aria-label="Close"
-                onClick={() => setShowTweakDialog(false)}
-                type="button"
-              >
-                <CloseIcon width={14} height={14} />
-              </button>
-            </div>
+      <ModalShell
+        open={showTweakDialog && !!viewingApp}
+        onClose={() => setShowTweakDialog(false)}
+        title="Tweak resume as per job description"
+        titleId="tweak-title"
+        width="600px"
+      >
+        {viewingApp ? (
+          <>
             <div className="ai-modal-body">
               <div className="field">
                 <label>
@@ -1421,32 +1381,18 @@ function ApplicationsInner() {
                 {aiBusy ? "Generating…" : tweakParentId ? "Generate next version" : "Generate"}
               </button>
             </div>
-          </div>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </ModalShell>
 
-      {reminderApp ? (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="reminder-modal-title"
-          onClick={() => setReminderApp(null)}
-        >
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="list-head">
-              <h2 id="reminder-modal-title">
-                Set reminder · {reminderApp.company}
-              </h2>
-              <button
-                className="icon-button"
-                aria-label="Close"
-                type="button"
-                onClick={() => setReminderApp(null)}
-              >
-                <CloseIcon width={14} height={14} />
-              </button>
-            </div>
+      <ModalShell
+        open={!!reminderApp}
+        onClose={() => setReminderApp(null)}
+        title={reminderApp ? `Set reminder · ${reminderApp.company}` : "Set reminder"}
+        titleId="reminder-modal-title"
+      >
+        {reminderApp ? (
+          <>
             <div className="form-grid">
               <div className="field" style={{ gridColumn: "1 / -1" }}>
                 <label>Quick pick</label>
@@ -1530,9 +1476,9 @@ function ApplicationsInner() {
                 {reminderBusy ? "Saving…" : "Set reminder"}
               </button>
             </div>
-          </div>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </ModalShell>
 
       <ImportModal
         open={importOpen}

@@ -1,4 +1,7 @@
-import { ReactNode } from "react";
+"use client";
+
+import { ReactNode, useEffect, useRef } from "react";
+import { FocusScope } from "@radix-ui/react-focus-scope";
 
 export function SectionHeading({
   label,
@@ -42,4 +45,81 @@ export function MetricCard({
 
 export function Pill({ children, tone = "default" }: { children: ReactNode; tone?: string }) {
   return <span className={`pill tone-${tone}`}>{children}</span>;
+}
+
+interface ModalShellProps {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  titleId?: string;
+  children: ReactNode;
+  width?: string;
+}
+
+export function ModalShell({
+  open,
+  onClose,
+  title,
+  titleId = "modal-title",
+  children,
+  width = "480px"
+}: ModalShellProps) {
+  const triggerRef = useRef<Element | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      triggerRef.current = document.activeElement;
+      document.body.classList.add("overflow-hidden");
+      const main = document.querySelector("main");
+      if (main) (main as HTMLElement).setAttribute("inert", "");
+    } else {
+      document.body.classList.remove("overflow-hidden");
+      const main = document.querySelector("main");
+      if (main) (main as HTMLElement).removeAttribute("inert");
+      requestAnimationFrame(() => {
+        if (triggerRef.current instanceof HTMLElement) triggerRef.current.focus();
+      });
+    }
+    return () => {
+      document.body.classList.remove("overflow-hidden");
+      const main = document.querySelector("main");
+      if (main) (main as HTMLElement).removeAttribute("inert");
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="modal-backdrop"
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <FocusScope trapped loop>
+        <div
+          className="modal-content"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          style={{ width, maxWidth: "calc(100vw - 2rem)" }}
+        >
+          <h2 id={titleId} className="modal-title">
+            {title}
+          </h2>
+          {children}
+        </div>
+      </FocusScope>
+    </div>
+  );
 }
