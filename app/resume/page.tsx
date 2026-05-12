@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { ProductFrame } from "@/components/frames";
-import { ArrowRightIcon, UploadIcon } from "@/components/icons";
+import { ArrowRightIcon, FileIcon, UploadIcon } from "@/components/icons";
 import { renderMarkdown } from "@/lib/markdown";
 import { api, ApiError, downloadPDF } from "@/lib/api-client";
 import { CREDIT_COSTS } from "@/lib/billing";
@@ -138,12 +138,19 @@ export default function ResumeAiPage() {
     <ProductFrame active="resume">
       <section style={{ paddingTop: 16 }}>
         <div className="stepper">
-          {steps.map((step, index) => (
-            <div className={index <= stepIndex ? "step active" : "step"} key={step}>
-              <span className="step-number">{index + 1}</span>
-              <span>{step}</span>
-            </div>
-          ))}
+          {steps.map((step, index) => {
+            const stateClass =
+              index < stepIndex ? "step completed" : index === stepIndex ? "step active" : "step";
+            return (
+              <Fragment key={step}>
+                {index > 0 && <div className="step-line" />}
+                <div className={stateClass}>
+                  <span className="step-number">{index < stepIndex ? "✓" : index + 1}</span>
+                  <span>{step}</span>
+                </div>
+              </Fragment>
+            );
+          })}
         </div>
 
         {report && stepIndex !== 3 ? (
@@ -157,18 +164,23 @@ export default function ResumeAiPage() {
                 style={{
                   display: "grid",
                   placeItems: "center",
-                  width: 28,
-                  height: 28,
-                  borderRadius: 999,
-                  background: "#2c2c2c",
-                  color: "#b3b1ab"
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  background: "var(--chip)",
+                  color: "var(--text-soft)",
+                  flexShrink: 0
                 }}
               >
-                <UploadIcon width={14} height={14} />
+                <FileIcon width={15} height={15} />
               </span>
               <div>
-                <strong>Your last resume report is ready · score {report.score}/100</strong>
-                <p className="muted">Click to view</p>
+                <strong style={{ display: "block", color: "var(--text)", fontSize: 13 }}>
+                  Last report ready
+                </strong>
+                <p className="muted" style={{ marginTop: 2, fontSize: 12 }}>
+                  Score <strong style={{ color: "var(--text)" }}>{report.score}/100</strong> · tap to view
+                </p>
               </div>
             </div>
             <ArrowRightIcon width={16} height={16} />
@@ -191,7 +203,7 @@ export default function ResumeAiPage() {
                   {report.score} / 100
                 </h2>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div className="resume-report-actions">
                 <button
                   className="ghost-button"
                   type="button"
@@ -229,7 +241,7 @@ export default function ResumeAiPage() {
           /* Step 2 — Job Info */
           <div style={{ width: "min(560px, 100%)", margin: "32px auto 0" }}>
             <div style={{ textAlign: "center" }}>
-              <h1 style={{ fontSize: 28, fontWeight: 400, fontFamily: "var(--font-serif-stack)" }}>
+              <h1 style={{ fontSize: "clamp(20px, 5vw, 28px)", fontWeight: 400, fontFamily: "var(--font-serif-stack)" }}>
                 What role are you targeting?
               </h1>
               <p className="muted" style={{ marginTop: 8 }}>
@@ -275,7 +287,7 @@ export default function ResumeAiPage() {
           /* Step 1 — Level */
           <div style={{ width: "min(480px, 100%)", margin: "32px auto 0" }}>
             <div style={{ textAlign: "center" }}>
-              <h1 style={{ fontSize: 28, fontWeight: 400, fontFamily: "var(--font-serif-stack)" }}>
+              <h1 style={{ fontSize: "clamp(20px, 5vw, 28px)", fontWeight: 400, fontFamily: "var(--font-serif-stack)" }}>
                 What&apos;s your experience level?
               </h1>
               <p className="muted" style={{ marginTop: 8 }}>
@@ -311,11 +323,11 @@ export default function ResumeAiPage() {
         ) : (
           /* Step 0 — Upload */
           <>
-            <div style={{ textAlign: "center" }}>
-              <h1 style={{ fontSize: 36, fontWeight: 400, fontFamily: "var(--font-serif-stack)" }}>
+            <div style={{ textAlign: "center", marginBottom: 8 }}>
+              <h1 style={{ fontSize: "clamp(22px, 6vw, 36px)", fontWeight: 400, fontFamily: "var(--font-serif-stack)" }}>
                 {pasteMode ? "Paste your resume text" : "Upload your resume"}
               </h1>
-              <p className="muted" style={{ marginTop: 12 }}>
+              <p className="muted" style={{ marginTop: 8 }}>
                 We&apos;ll analyze it and show you exactly where to improve.
               </p>
             </div>
@@ -396,23 +408,28 @@ export default function ResumeAiPage() {
               </>
             )}
 
-            <p style={{ marginTop: 28, textAlign: "center" }}>
-              <button
-                type="button"
-                onClick={() => setPasteMode((v) => !v)}
-                style={{
-                  background: "none",
-                  border: 0,
-                  color: "#ececea",
-                  borderBottom: "1px solid #4a4a4a",
-                  padding: "2px 0",
-                  cursor: "pointer",
-                  font: "inherit"
-                }}
-              >
-                {pasteMode ? "Or upload a PDF" : "Or paste text manually"}
-              </button>
-            </p>
+            <button
+              type="button"
+              className="resume-paste-toggle"
+              onClick={() => setPasteMode((v) => !v)}
+              style={{
+                marginTop: 20,
+                display: "block",
+                width: "min(560px, 100%)",
+                marginLeft: "auto",
+                marginRight: "auto",
+                padding: "10px 16px",
+                background: "none",
+                border: 0,
+                borderBottom: "1px solid #4a4a4a",
+                color: "#ececea",
+                cursor: "pointer",
+                font: "inherit",
+                textAlign: "center"
+              }}
+            >
+              {pasteMode ? "Or upload a PDF" : "Or paste text manually"}
+            </button>
           </>
         )}
       </section>

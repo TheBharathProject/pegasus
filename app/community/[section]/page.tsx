@@ -286,10 +286,17 @@ function validSurface(s: string): s is CommunitySurface {
 // Client-side search across title + body. The community list is paged
 // at 20 posts so substring search is fine; once we cross a few hundred
 // per surface this should move server-side.
-function filteredPosts(posts: ApiCommunityPost[], q: string): ApiCommunityPost[] {
+function filteredPosts(posts: ApiCommunityPost[], q: string, tag?: string | null): ApiCommunityPost[] {
+  let result = posts;
+  if (tag) {
+    result = result.filter((p) => {
+      const tags = p.metadata?.tags;
+      return Array.isArray(tags) && tags.includes(tag);
+    });
+  }
   const trimmed = q.trim().toLowerCase();
-  if (!trimmed) return posts;
-  return posts.filter(
+  if (!trimmed) return result;
+  return result.filter(
     (p) =>
       p.title.toLowerCase().includes(trimmed) ||
       (p.body ?? "").toLowerCase().includes(trimmed)
@@ -494,16 +501,29 @@ export default function CommunitySectionPage() {
           const isActive =
             filterKey === "sort"
               ? activeValue === filterValue || (!activeValue && filter === "Newest")
-              : filterKey
-                ? activeValue === filterValue
-                : false;
+              : filterKey && filterValue === ""
+                ? !searchParams.get(filterKey)
+                : filterKey
+                  ? activeValue === filterValue
+                  : false;
 
           return (
             <button
               type="button"
               className={isActive ? "filter-box is-active" : "filter-box"}
               key={filter}
-              onClick={() => filterKey ? setFilter(filterKey, filterValue) : undefined}
+              onClick={() => {
+                if (!filterKey) return;
+                if (isActive) {
+                  if (filterKey === "sort" && filterValue !== "newest") {
+                    setFilter("sort", "newest");
+                  } else if (filterKey !== "sort" && filterValue !== "") {
+                    setFilter(filterKey, "");
+                  }
+                } else {
+                  setFilter(filterKey, filterValue);
+                }
+              }}
             >
               {filter}
             </button>
@@ -513,11 +533,19 @@ export default function CommunitySectionPage() {
 
       {section === "ask" ? (
         <div className="tag-row">
-          {askTags.map((tag) => (
-            <span className="pill" key={tag}>
-              {tag}
-            </span>
-          ))}
+          {askTags.map((tag) => {
+            const activeTag = searchParams.get("tag");
+            return (
+              <button
+                type="button"
+                key={tag}
+                className={activeTag === tag ? "nx-cats-chip is-active" : "nx-cats-chip"}
+                onClick={() => setFilter("tag", activeTag === tag ? "" : tag)}
+              >
+                {tag}
+              </button>
+            );
+          })}
         </div>
       ) : null}
 
@@ -526,38 +554,72 @@ export default function CommunitySectionPage() {
           surface-specific empty state (CommunityEmpty). */}
       {!loadedOnce ? (
         <p className="muted small" style={{ marginTop: 24 }}>Loading…</p>
-      ) : filteredPosts(posts, search).length > 0 ? (
-        <ul className="post-list">
-          {filteredPosts(posts, search).map((post) => (
-            <li key={post.id}>
-              <Link className="post-row" href={`/community/posts/${post.slug || post.id}`}>
-                <div className="post-row-body">
-                  <h3 className="post-row-title">{post.title}</h3>
-                  {post.body ? (
-                    <p className="post-row-preview">
-                      {post.body.length > 200 ? post.body.slice(0, 200) + "…" : post.body}
+      ) : filteredPosts(posts, search, searchParams.get("tag")).length > 0 ? (
+        section === "recruiters" ? (
+          <div className="recruiter-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Recruiter</th>
+                  <th>Title</th>
+                  <th>Company</th>
+                  <th>Reviews</th>
+                  <th>Upvotes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPosts(posts, search, searchParams.get("tag")).map((post) => {
+                  const m = post.metadata as Record<string, unknown> | undefined;
+                  return (
+                    <tr
+                      key={post.id}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => router.push(`/community/posts/${post.slug || post.id}`)}
+                    >
+                      <td><strong>{String(m?.recruiter || post.title)}</strong></td>
+                      <td>{String(m?.title || "—")}</td>
+                      <td>{String(m?.company || "—")}</td>
+                      <td className="num">{post.commentCount}</td>
+                      <td className="num">↑ {post.voteCount}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <ul className="post-list">
+            {filteredPosts(posts, search, searchParams.get("tag")).map((post) => (
+              <li key={post.id}>
+                <Link className="post-row" href={`/community/posts/${post.slug || post.id}`}>
+                  <div className="post-row-body">
+                    <h3 className="post-row-title">{post.title}</h3>
+                    {post.body ? (
+                      <p className="post-row-preview">
+                        {post.body.length > 200 ? post.body.slice(0, 200) + "…" : post.body}
+                      </p>
+                    ) : null}
+                    <p className="post-row-meta">
+                      {post.authorSlug ? (
+                        <a href={`/u/${post.authorSlug}`} className="post-author-link" onClick={(e) => e.stopPropagation()}>
+                          {post.authorName || "Anonymous"}
+                        </a>
+                      ) : (
+                        <span>{post.authorName || "Anonymous"}</span>
+                      )}
+                      <span aria-hidden>·</span>
+                      <span>{fmtRelative(post.createdAt)}</span>
+                      <span aria-hidden>·</span>
+                      <span>↑ {post.voteCount}</span>
+                      <span aria-hidden>·</span>
+                      <span>{post.commentCount} {post.commentCount === 1 ? "reply" : "replies"}</span>
                     </p>
-                  ) : null}
-                  <p className="post-row-meta">
-                    {post.authorSlug ? (
-                      <a href={`/u/${post.authorSlug}`} className="post-author-link" onClick={(e) => e.stopPropagation()}>
-                        {post.authorName || "Anonymous"}
-                      </a>
-                    ) : (
-                      <span>{post.authorName || "Anonymous"}</span>
-                    )}
-                    <span aria-hidden>·</span>
-                    <span>{fmtRelative(post.createdAt)}</span>
-                    <span aria-hidden>·</span>
-                    <span>↑ {post.voteCount}</span>
-                    <span aria-hidden>·</span>
-                    <span>{post.commentCount} {post.commentCount === 1 ? "reply" : "replies"}</span>
-                  </p>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )
       ) : (
         <CommunityEmpty section={section} meta={meta} onCta={() => setOpenModal(true)} />
       )}

@@ -23,6 +23,7 @@ import {
   type ApiResumesResponse,
   type ApiCoverLettersResponse
 } from "@/lib/api-client";
+import { Portal } from "@/components/ui";
 import { isAuthed } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 
@@ -490,6 +491,7 @@ export default function ResumesPage() {
       />
 
       {pendingUpload ? (
+        <Portal>
         <div
           className="modal-backdrop"
           role="dialog"
@@ -698,6 +700,7 @@ export default function ResumesPage() {
             )}
           </div>
         </div>
+        </Portal>
       ) : null}
 
       {compareLeftId ? (

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import {
-  ArrowUpRightIcon,
+  LogOutIcon,
   BellIcon,
   BriefcaseIcon,
   ChatIcon,
@@ -252,14 +252,28 @@ export function ProductFrame({
 
   return (
     <div className={drawerOpen ? "product-frame is-drawer-open" : "product-frame"}>
-      <button
-        className="mobile-menu-toggle"
-        aria-label="Open menu"
-        onClick={() => setDrawerOpen(true)}
-        type="button"
-      >
-        <MenuIcon width={18} height={18} />
-      </button>
+      <header className="mobile-topbar">
+        <button
+          className="mobile-topbar-menu"
+          aria-label="Open menu"
+          onClick={() => setDrawerOpen(true)}
+          type="button"
+        >
+          <MenuIcon width={20} height={20} />
+        </button>
+        <Link className="mobile-topbar-brand" href="/dashboard" aria-label="Pegasus">
+          <span className="brand-badge">P</span>
+          <span>Pegasus</span>
+        </Link>
+        <Link
+          className="mobile-topbar-bell"
+          href="/notifications"
+          aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
+        >
+          <BellIcon width={16} height={16} />
+          {unreadCount > 0 ? <span className="nav-icon-dot" aria-hidden="true" /> : null}
+        </Link>
+      </header>
 
       <button
         className="mobile-menu-backdrop"
@@ -444,7 +458,7 @@ function SidebarUser() {
           void signOut("/");
         }}
       >
-        <ArrowUpRightIcon width={14} height={14} />
+        <LogOutIcon width={15} height={15} />
       </button>
     </div>
   );

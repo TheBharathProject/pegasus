@@ -300,6 +300,12 @@ code {
   background: rgba(255, 255, 255, 0.06);
 }
 
+[data-theme="light"] .topnav-link.active,
+[data-theme="light"] .community-tab.active {
+  background: var(--bg-soft);
+  border-color: var(--border-strong);
+}
+
 /* PRODUCT FRAME */
 .product-frame {
   position: relative;
@@ -346,7 +352,7 @@ html[data-sb="expanded"] .product-frame {
   background: transparent;
 }
 .sidebar::-webkit-scrollbar-thumb {
-  background: #2c2c2c;
+  background: var(--border);
   border-radius: 999px;
 }
 @media (hover: hover) {
@@ -356,7 +362,7 @@ html[data-sb="expanded"] .product-frame {
 }
 .sidebar {
   scrollbar-width: thin;
-  scrollbar-color: #2c2c2c transparent;
+  scrollbar-color: var(--border) transparent;
 }
 
 html[data-sb="collapsed"] .sidebar {
@@ -460,7 +466,7 @@ html[data-sb="expanded"] .sidebar-nav {
   left: 14px;
   right: 14px;
   height: 1px;
-  background: #2c2c2c;
+  background: var(--border);
   opacity: 0;
   transition: opacity 140ms ease 80ms;
 }
@@ -521,13 +527,17 @@ html[data-sb="collapsed"] .nav-group-label {
 @media (hover: hover) {
   .sidebar-link:hover {
     color: var(--text);
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-hover);
   }
 }
 
 .sidebar-link.active {
   color: var(--text);
   background: #2c2c2c;
+}
+
+[data-theme="light"] .sidebar-link.active {
+  background: var(--bg-soft);
 }
 
 html[data-sb="expanded"] .sidebar-link.active {
@@ -682,11 +692,6 @@ html[data-sb="collapsed"] .sidebar-billing-copy {
   }
 }
 
-@media (hover: hover) {
-  .sidebar-user:hover .signout-icon {
-    color: var(--text);
-  }
-}
 
 /* Profile-link takes the leftmost portion (avatar + name + email).
    Inherits the row's flex context. Removes the default <a> underline. */
@@ -699,17 +704,33 @@ html[data-sb="collapsed"] .sidebar-billing-copy {
   text-decoration: none;
 }
 
-/* Sign-out button — sibling of the profile link, sits on the right of
-   the row. Reuses .signout-icon for color/spacing so the hover state
-   matches the old layout. Borderless, transparent, cursor-pointer to
-   read as an icon-button. */
+/* Sign-out button — a small dark tile with a log-out icon. */
 .sidebar-signout-btn {
-  background: transparent;
-  border: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
   padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-soft);
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+@media (hover: hover) {
+  .sidebar-signout-btn:hover {
+    background: var(--bg-deep);
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+  [data-theme="light"] .sidebar-signout-btn:hover {
+    background: var(--rule-mid);
+    border-color: var(--rule-high);
+    color: var(--text);
+  }
 }
 
 .avatar-dot {
@@ -776,8 +797,6 @@ html[data-sb="collapsed"] .sidebar-billing-copy {
 }
 
 .signout-icon {
-  color: var(--text-faint);
-  flex-shrink: 0;
   margin-right: 14px;
   opacity: 1;
   transition: opacity 140ms ease 80ms;
@@ -794,6 +813,7 @@ html[data-sb="collapsed"] .signout-icon {
   width: 100%;
   max-width: 1600px;
   margin-inline: auto;
+  min-width: 0;
   padding: clamp(20px, 3vw, 36px) clamp(18px, 4vw, 48px) clamp(48px, 6vw, 80px);
 }
 
@@ -986,6 +1006,10 @@ html[data-sb="collapsed"] .signout-icon {
   gap: 0;
 }
 
+[data-theme="light"] .segmented-control {
+  background: var(--surface-2);
+}
+
 .segmented-button {
   border: 0;
   background: transparent;
@@ -997,6 +1021,10 @@ html[data-sb="collapsed"] .signout-icon {
 .segmented-button.active {
   color: var(--text);
   background: #2c2c2c;
+}
+
+[data-theme="light"] .segmented-button.active {
+  background: var(--bg-soft);
 }
 
 /* PANELS, METRICS */
@@ -1232,7 +1260,7 @@ html[data-sb="collapsed"] .signout-icon {
 }
 
 .tone-default {
-  background: #2c2c2c;
+  background: var(--chip);
 }
 
 .tone-stage-interest {
@@ -1264,9 +1292,11 @@ html[data-sb="collapsed"] .signout-icon {
   gap: 14px;
   margin-top: 18px;
   overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: 6px;
-  /* Allow the scroll surface to extend to the page right-edge cleanly */
   scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
 }
 
 .kanban-column,
@@ -1362,6 +1392,25 @@ html[data-sb="collapsed"] .signout-icon {
   font-size: 13px;
   font-weight: 500;
   word-break: break-word;
+}
+
+.kanban-card-move {
+  display: none;
+  margin-top: 8px;
+  width: 100%;
+  font-size: 12px;
+  color: var(--text-soft);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+@media (hover: none) {
+  .kanban-card-move {
+    display: block;
+  }
 }
 
 .empty-card {
@@ -2337,7 +2386,7 @@ html[data-sb="collapsed"] .signout-icon {
 @media (hover: hover) {
   .md-tool:hover:not(:disabled) {
     color: var(--text);
-    background: #2c2c2c;
+    background: var(--bg-hover);
   }
 }
 
@@ -2448,7 +2497,7 @@ html[data-sb="collapsed"] .signout-icon {
 .markdown-body code {
   padding: 2px 6px;
   border-radius: 4px;
-  background: #2c2c2c;
+  background: var(--chip);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.92em;
 }
@@ -2534,6 +2583,10 @@ html[data-sb="collapsed"] .signout-icon {
   background: #2c2c2c;
 }
 
+[data-theme="light"] .category-item.active {
+  background: var(--bg-soft);
+}
+
 .note-item {
   display: grid;
   grid-template-columns: 1fr;
@@ -2607,7 +2660,18 @@ html[data-sb="collapsed"] .signout-icon {
 
 .step.active .step-number {
   border-color: var(--text);
+  border-width: 2px;
   color: var(--text);
+}
+
+.step.completed .step-number {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
+.step.completed + .step-line {
+  background: var(--text);
 }
 
 .last-report {
@@ -2664,7 +2728,7 @@ html[data-sb="collapsed"] .signout-icon {
   height: 56px;
   margin: 0 auto 20px;
   border-radius: 999px;
-  background: #2c2c2c;
+  background: var(--surface-2);
 }
 
 .drop-icon svg {
@@ -3091,6 +3155,12 @@ html[data-sb="collapsed"] .signout-icon {
   font-weight: 400;
   letter-spacing: -0.01em;
   margin-bottom: 12px;
+}
+
+.resume-report-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .definition-grid {
@@ -8135,7 +8205,7 @@ html[data-sb="expanded"] .product-frame {
 }
 
 /* MOBILE — hamburger + backdrop scaffolding (hidden by default, shown ≤720px) */
-.mobile-menu-toggle,
+.mobile-topbar,
 .mobile-menu-backdrop,
 .mobile-drawer-close {
   display: none;
@@ -8208,18 +8278,63 @@ html[data-sb="expanded"] .product-frame {
     display: none !important;
   }
 
-  /* Hamburger button sits inline above the page content. */
-  .mobile-menu-toggle {
-    display: inline-grid;
+  /* ── Mobile top bar ─────────────────────────────────────────────── */
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 54px;
+    padding: 0 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+
+  .mobile-topbar-menu {
+    display: grid;
     place-items: center;
-    width: 40px;
-    height: 40px;
-    margin: 14px 0 4px 14px;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
     border: 1px solid var(--border);
     border-radius: 8px;
-    background: var(--bg);
+    background: transparent;
     color: var(--text);
     cursor: pointer;
+  }
+
+  .mobile-topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 500;
+    font-family: var(--font-sans-stack);
+    text-decoration: none;
+    letter-spacing: -0.01em;
+  }
+
+  .mobile-topbar-bell {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-soft);
+    text-decoration: none;
+  }
+
+  /* notification dot on the topbar bell */
+  .mobile-topbar-bell .nav-icon-dot {
+    top: 7px;
+    right: 7px;
   }
 
   /* Backdrop dims the page when the drawer is open. */
@@ -8260,9 +8375,10 @@ html[data-sb="expanded"] .product-frame {
     z-index: 2;
   }
 
-  /* Tighter overall padding for product main on mobile. */
+  /* Tighter overall padding for product main on mobile.
+     12px top gives breathing room below the sticky topbar. */
   .product-main {
-    padding: 0 14px 48px;
+    padding: 12px 14px 48px;
   }
 
   /* Notes flush layout shouldn't keep its desktop "fill the screen" pattern. */
@@ -8285,10 +8401,26 @@ html[data-sb="expanded"] .product-frame {
     min-height: auto;
   }
 
-  /* Make the application toolbar stack a bit nicer. */
+  /* header-actions must have an explicit width so the toolbar's flex-wrap
+     has a firm boundary. align-items:stretch on the column-flex parent is
+     not enough when the item has flex-shrink:0 — the browser falls back to
+     max-content width and wrap never fires. */
+  .header-actions {
+    width: 100%;
+    min-width: 0;
+  }
+  /* Toolbar wraps its buttons to a second row on small screens.
+     width:100% is mandatory — the base rule has flex-shrink:0 so without
+     an explicit width the toolbar expands to max-content inside
+     .header-actions and flex-wrap never triggers. */
   .toolbar {
     width: 100%;
-    justify-content: flex-start;
+    flex-wrap: wrap;
+    row-gap: 8px;
+    min-width: 0;
+  }
+  .toolbar > .primary-button {
+    flex: 1;
   }
 
   /* Modals occupy most of the screen. */
@@ -8320,21 +8452,101 @@ html[data-sb="expanded"] .product-frame {
     grid-template-columns: 1fr;
   }
 
-  /* Resume stepper and dropzone shrink. */
+  /* Resume wizard — mobile sizing.
+     auto 1fr ... lets the 1fr columns fill the space between circles so
+     steps are equally distributed. margin-top:20px on the line aligns it
+     to the vertical centre of the 40px circles. */
   .stepper {
-    width: 100%;
-    grid-template-columns: repeat(7, auto);
-    gap: 4px;
+    width: min(440px, 100%);
+    margin-inline: auto;
+    grid-template-columns: auto 1fr auto 1fr auto 1fr auto;
+    gap: 0;
+    margin-bottom: 24px;
+    align-items: start;
+    justify-content: initial;
+  }
+  .step {
+    gap: 10px;
   }
   .step span:not(.step-number) {
-    font-size: 10px;
+    font-size: 12px;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .step-number {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
   }
   .step-line {
-    width: 24px;
+    width: 100%;
+    height: 0;
+    background: none;
+    border-top: 1px dashed var(--border-strong);
+    margin-top: 20px;
   }
-  .last-report,
+  .step.completed + .step-line {
+    border-top: 1px solid var(--text);
+  }
+  /* Resume results — score header stacks on narrow screens */
+  .settings-section .list-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .resume-report-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  .resume-report-actions .ghost-button {
+    width: 100%;
+    justify-content: center;
+  }
+  .last-report {
+    width: 100%;
+    min-height: 56px;
+    padding: 0 14px;
+    margin-bottom: 24px;
+    border-radius: 14px;
+  }
   .drop-zone {
     width: 100%;
+    min-height: 200px;
+    padding: 36px 24px;
+    border-radius: 14px;
+  }
+  .drop-icon {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 18px;
+  }
+  .drop-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+  .resume-paste-toggle {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text-soft);
+    font-family: var(--font-sans-stack);
+    font-size: 13px;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  /* Board: sit within the normal content area and scroll horizontally.
+     The negative-margin width trick is dropped — it caused .product-main
+     to see a wider-than-viewport child and expand its own grid cell.
+     scrollbar-gutter:auto removes the ~15px reserved gutter from desktop. */
+  .board-grid {
+    scrollbar-gutter: auto;
+    overflow-y: hidden;
+    touch-action: pan-x;
   }
 
   /* Application table → card list. Each row becomes a 2-column card
@@ -8646,6 +8858,10 @@ html[data-sb="expanded"] .product-frame {
   color: var(--text);
 }
 
+[data-theme="light"] .nx-cat.is-active {
+  background: var(--bg-soft);
+}
+
 .nx-cat.is-empty {
   color: var(--text-faint);
 }
@@ -8906,6 +9122,10 @@ html[data-sb="expanded"] .product-frame {
   background: #2c2c2c;
 }
 
+[data-theme="light"] .nx-icon-btn.is-active {
+  background: var(--bg-soft);
+}
+
 .nx-modes {
   display: inline-flex;
   align-items: center;
@@ -8938,6 +9158,10 @@ html[data-sb="expanded"] .product-frame {
 .nx-mode.is-active {
   color: var(--text);
   background: #2c2c2c;
+}
+
+[data-theme="light"] .nx-mode.is-active {
+  background: var(--bg-soft);
 }
 
 /* Category chip in the editor head */
@@ -9034,6 +9258,10 @@ html[data-sb="expanded"] .product-frame {
 .nx-cat-menu-item.is-active {
   background: #2c2c2c;
   color: var(--text);
+}
+
+[data-theme="light"] .nx-cat-menu-item.is-active {
+  background: var(--bg-soft);
 }
 
 /* Backdrop — invisible on desktop (the dropdown is anchored to the chip);
@@ -9177,7 +9405,7 @@ html[data-sb="expanded"] .product-frame {
 @media (hover: hover) {
   .nx-tool:hover:not(:disabled) {
     color: var(--text);
-    background: #2c2c2c;
+    background: var(--bg-hover);
   }
 }
 
@@ -9316,6 +9544,10 @@ html[data-sb="expanded"] .product-frame {
   color: var(--text);
   background: #2c2c2c;
   border-color: var(--border-strong);
+}
+
+[data-theme="light"] .nx-cats-chip.is-active {
+  background: var(--bg-soft);
 }
 
 .nx-cats-chip.is-empty {
@@ -9575,6 +9807,10 @@ html[data-sb="expanded"] .product-frame {
 .category-row.active {
   background: #2c2c2c;
   color: var(--text);
+}
+
+[data-theme="light"] .category-row.active {
+  background: var(--bg-soft);
 }
 
 .notes-list {
@@ -10004,6 +10240,9 @@ html[data-sb="expanded"] .product-frame {
     color: var(--text);
     background: #2c2c2c;
     border-color: var(--border-strong);
+  }
+  [data-theme="light"] .notes-chip.active {
+    background: var(--bg-soft);
   }
   .notes-chip .category-dot {
     margin: 0;

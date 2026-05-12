@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ProductFrame } from "@/components/frames";
 import { ModalShell } from "@/components/ui";
-import { PencilIcon, PlusIcon, TrashIcon } from "@/components/icons";
+import { ContactIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "@/components/icons";
 import { api, type ApiRecruiter } from "@/lib/api-client";
 import { isAuthed } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
@@ -126,27 +126,28 @@ export default function RecruitersPage() {
   };
 
   return (
-    <ProductFrame active="recruiters">
-      <section style={{ paddingTop: 16 }}>
-        <div className="list-head">
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 600 }}>Recruiters</h1>
-            <p className="muted" style={{ marginTop: 4, fontSize: 13 }}>
-              Your private recruiter contacts — separate from the community directory.
-            </p>
-          </div>
+    <ProductFrame
+      active="recruiters"
+      title="Recruiters"
+      intro="Your private recruiter contacts — separate from the community directory."
+      actions={
+        !loading && items.length > 0 ? (
           <button className="primary-button" type="button" onClick={openNew}>
             <PlusIcon width={14} height={14} /> Add recruiter
           </button>
-        </div>
-
-        <div style={{ marginTop: 16 }}>
+        ) : undefined
+      }
+    >
+      <section>
+        <div className="community-search">
+          <span className="community-search-icon">
+            <SearchIcon width={14} height={14} />
+          </span>
           <input
-            type="search"
+            type="text"
             placeholder="Search by name, email or company…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: "min(320px, 100%)" }}
           />
         </div>
 
@@ -157,77 +158,82 @@ export default function RecruitersPage() {
         ) : null}
 
         {loading ? (
-          <p className="muted" style={{ marginTop: 24 }}>Loading…</p>
+          <p className="muted small" style={{ marginTop: 24 }}>Loading…</p>
         ) : filtered.length === 0 ? (
-          <div className="empty-state" style={{ marginTop: 40 }}>
-            <p className="muted">
-              {search ? "No recruiters match your search." : "No recruiters yet."}
+          <div className="community-empty">
+            <span className="community-empty-icon">
+              <ContactIcon width={22} height={22} />
+            </span>
+            <h3>{search ? "No results" : "No recruiters yet"}</h3>
+            <p>
+              {search
+                ? "No recruiters match your search."
+                : "Save the recruiters you've connected with to keep track of your network."}
             </p>
             {!search ? (
-              <button className="primary-button" type="button" onClick={openNew} style={{ marginTop: 12 }}>
-                Add your first recruiter
+              <button className="primary-button" type="button" onClick={openNew}>
+                <PlusIcon width={14} height={14} /> Add your first recruiter
               </button>
             ) : null}
           </div>
         ) : (
-          <section className="settings-section" style={{ marginTop: 20 }}>
-            <table className="app-table" style={{ width: "100%" }}>
+          <div className="recruiter-table">
+            <table>
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Email</th>
+                  <th>Recruiter</th>
                   <th>Company</th>
+                  <th>Email</th>
                   <th>LinkedIn</th>
-                  <th style={{ width: 80 }}></th>
+                  <th>Notes</th>
+                  <th style={{ width: 72 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r) => (
                   <tr key={r.id}>
-                    <td data-label="Name">
-                      <strong>{r.name}</strong>
-                      {r.notes ? (
-                        <p className="muted small" style={{ marginTop: 2 }}>{r.notes}</p>
-                      ) : null}
-                    </td>
-                    <td data-label="Email">
+                    <td><strong>{r.name}</strong></td>
+                    <td>{r.company || "—"}</td>
+                    <td>
                       <a href={`mailto:${r.email}`} style={{ color: "var(--accent)" }}>
                         {r.email}
                       </a>
                     </td>
-                    <td data-label="Company">{r.company ?? "—"}</td>
-                    <td data-label="LinkedIn">
+                    <td>
                       {r.linkedinUrl ? (
                         <a href={r.linkedinUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
                           View
                         </a>
                       ) : "—"}
                     </td>
-                    <td className="row-actions" data-label="">
-                      <button
-                        className="icon-button"
-                        type="button"
-                        aria-label={`Edit ${r.name}`}
-                        title="Edit"
-                        onClick={() => openEdit(r)}
-                      >
-                        <PencilIcon width={14} height={14} />
-                      </button>
-                      <button
-                        className="icon-button"
-                        type="button"
-                        aria-label={`Delete ${r.name}`}
-                        title="Delete"
-                        onClick={() => void handleDelete(r)}
-                      >
-                        <TrashIcon width={14} height={14} />
-                      </button>
+                    <td className="num">{r.notes || "—"}</td>
+                    <td>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button
+                          className="icon-button"
+                          type="button"
+                          aria-label={`Edit ${r.name}`}
+                          title="Edit"
+                          onClick={() => openEdit(r)}
+                        >
+                          <PencilIcon width={14} height={14} />
+                        </button>
+                        <button
+                          className="icon-button"
+                          type="button"
+                          aria-label={`Delete ${r.name}`}
+                          title="Delete"
+                          onClick={() => void handleDelete(r)}
+                        >
+                          <TrashIcon width={14} height={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </section>
+          </div>
         )}
       </section>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { ProductFrame } from "@/components/frames";
 import {
@@ -923,7 +924,8 @@ function ModalShell({
   children: React.ReactNode;
   onClose: () => void;
 }) {
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="list-head">
@@ -934,7 +936,8 @@ function ModalShell({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

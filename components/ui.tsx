@@ -1,7 +1,13 @@
 "use client";
 
 import { ReactNode, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { FocusScope } from "@radix-ui/react-focus-scope";
+
+export function Portal({ children }: { children: ReactNode }) {
+  if (typeof document === "undefined") return null;
+  return createPortal(children, document.body);
+}
 
 export function SectionHeading({
   label,
@@ -96,9 +102,9 @@ export function ModalShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div
       className="modal-backdrop"
       role="presentation"
@@ -120,6 +126,7 @@ export function ModalShell({
           {children}
         </div>
       </FocusScope>
-    </div>
+    </div>,
+    document.body
   );
 }

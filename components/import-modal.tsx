@@ -13,6 +13,7 @@
 // silently import 0 rows; the user sees the error before committing.
 
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { api, apiBaseUrl } from "@/lib/api-client";
 import { getToken } from "@/lib/auth";
 import {
@@ -181,7 +182,8 @@ export function ImportModal({
     URL.revokeObjectURL(url);
   };
 
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
       className="modal-backdrop"
       role="dialog"
@@ -428,7 +430,8 @@ export function ImportModal({
           ) : null}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

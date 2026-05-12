@@ -8,6 +8,7 @@
 // versions so the user can eyeball which looks tighter.
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { api, type ApiFile } from "@/lib/api-client";
 import { CloseIcon } from "@/components/icons";
 
@@ -65,7 +66,8 @@ export function ResumeCompare({ resumes, initialLeftId, onClose }: Props) {
     };
   }, [rightId]);
 
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
       className="modal-backdrop"
       role="dialog"
@@ -106,7 +108,8 @@ export function ResumeCompare({ resumes, initialLeftId, onClose }: Props) {
           />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

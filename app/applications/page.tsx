@@ -801,6 +801,17 @@ function ApplicationsInner() {
                       <p className="muted small" style={{ marginTop: 4 }}>
                         {c.role}
                       </p>
+                      <select
+                        className="kanban-card-move"
+                        value={c.stage}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => void moveAppToStage(c.id, e.target.value)}
+                        aria-label={`Move ${c.company} to stage`}
+                      >
+                        {STAGES.map((s) => (
+                          <option key={s} value={s}>{STAGE_LABELS[s]}</option>
+                        ))}
+                      </select>
                     </div>
                   ))
                 )}
