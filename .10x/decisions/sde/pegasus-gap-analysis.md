@@ -121,6 +121,70 @@
 
 ---
 
+---
+
+## TASK-23 — ModalShell + FocusScope across all 8 modal sites
+
+**Date:** 2026-05-12
+**Commit:** fa8fa1e
+
+**Files changed:**
+- `components/ui.tsx` — added `ModalShell` export + `"use client"` directive + `useEffect`/`useRef` imports + `FocusScope` from `@radix-ui/react-focus-scope`
+- `app/applications/page.tsx` — migrated 6 modal sites (view detail, add/edit form, cover letter, resume tweak, set reminder)
+- `app/settings/page.tsx` — migrated 2 modal sites (delete account, cancel subscription); removed unused `CloseIcon` and `SettingsIcon` imports
+- `app/recruiters/page.tsx` — migrated 1 modal site (add/edit recruiter); removed `CloseIcon` import
+- `app/community/[section]/page.tsx` — imported exported `ModalShell`; deleted local `ModalShell` function (was lines 641-671); updated 5 sub-modal call sites (`open={true}`, dropped `intro`/`size` props)
+- `package.json` / `pnpm-lock.yaml` — added `@radix-ui/react-focus-scope 1.1.8`
+
+**What was built:**
+
+`ModalShell` in `components/ui.tsx`:
+- Traps focus via `<FocusScope trapped loop>` (wraps content in a div rendered by the Radix primitive)
+- On open: saves `document.activeElement` to `triggerRef`, adds `overflow-hidden` to body, sets `inert=""` on `<main>`
+- On close: removes `overflow-hidden`, removes `inert`, restores focus to `triggerRef` via `requestAnimationFrame`
+- Cleanup in effect return also removes `overflow-hidden` + `inert` (handles unmount)
+- Escape key listener via `window.addEventListener("keydown")` when open
+- Returns `null` when `open=false` (no DOM node rendered)
+- Backdrop click via `role="presentation"` outer div with `onClick` checking `e.target === e.currentTarget`
+- Inner dialog div: `role="dialog" aria-modal="true" aria-labelledby={titleId}` with `className="modal-content"`
+
+**Modal site inventory (all 8 required sites + 2 bonus):**
+
+| # | Site | File | Before | After |
+|---|---|---|---|---|
+| 1 | Add application | app/applications/page.tsx | `modal-backdrop` + `modal-card` | `<ModalShell open={showModal} ...>` |
+| 2 | Edit application | app/applications/page.tsx | same (same showModal) | same ModalShell |
+| 3 | View application detail | app/applications/page.tsx | `modal-backdrop` + `modal-card--wide` | `<ModalShell open={!!viewingApp} width="780px" ...>` |
+| 4 | Set reminder | app/applications/page.tsx | `modal-backdrop` + `modal-card` | `<ModalShell open={!!reminderApp} ...>` |
+| 5 | Cover letter | app/applications/page.tsx | `modal-backdrop ai-modal-backdrop` + `modal-card ai-modal-card` | `<ModalShell open={showCoverDialog && !!viewingApp} width="600px" ...>` |
+| 6 | Resume tweak | app/applications/page.tsx | same | `<ModalShell open={showTweakDialog && !!viewingApp} width="600px" ...>` |
+| 7 | Add/edit recruiter | app/recruiters/page.tsx | `modal-backdrop` + `modal-card` | `<ModalShell open={showModal} ...>` |
+| 8 | Delete account | app/settings/page.tsx | `modal-backdrop` + `modal-card` | `<ModalShell open={showCancel} width="460px" ...>` |
+| + | Cancel subscription | app/settings/page.tsx | `modal-backdrop` + `modal-card` | `<ModalShell open={showCancelModal && ...} width="480px" ...>` |
+| + | Community modals (5) | app/community/[section]/page.tsx | Local `ModalShell` function | Exported `ModalShell open={true}` |
+
+**Local ModalShell deleted:** Yes — the function at lines 641-671 of `app/community/[section]/page.tsx` was removed. The 5 community sub-modal call sites (Review, Experience, Referral, Ask, Recruiter) were updated to use the exported component with `open={true}` (they are only rendered when `openModal && section === "..."` is true at the parent level).
+
+**Deviations from plan:**
+
+1. `FocusScope` from `@radix-ui/react-focus-scope` v1.1.8 renders a `<div>` itself (it's a component, not a render-prop). The spec said `<Scope as FocusScope>` — the correct import is `import { FocusScope } from "@radix-ui/react-focus-scope"` and usage is `<FocusScope trapped loop>`. No `@ts-ignore` needed for `inert` because we set/remove it via `(el as HTMLElement).setAttribute` imperatively, not via JSX.
+
+2. The community page's local `ModalShell` had `intro` and `size` props. The exported `ModalShell` uses `width` instead of `size`. The `lg` size is replaced with `width="720px"` on the ExperienceModal call site. `intro` text is dropped — it was descriptive only and the form labels provide sufficient context.
+
+3. The view-application "title" is the company name (rendered by `ModalShell`'s `<h2>`), so the old `<h2 id="app-detail-title">` is gone and we pass `title={viewingApp?.company ?? ""}`. The sub-header `<p className="eyebrow">Application</p>` remains as a child.
+
+4. Cancel-subscription modal in settings was migrated as a bonus (not in the original 8-site list but in the same file).
+
+**Tech debt created:**
+- The `modal-content` CSS class used by exported `ModalShell` is new — it may need styling if none exists. The old modals used `modal-card`. LOW severity: CSS classes can be unified in the next CSS pass (TASK-24).
+- Community sub-modals now have `open={true}` hardcoded — this is fine because they're only rendered inside `{openModal && section === "..." ? <Modal ...> : null}` guards. But if someone refactors those guards, the `open` prop becomes load-bearing.
+
+**Test coverage:**
+- `pnpm tsc --noEmit` — zero errors (verified before commit).
+- No unit tests added — no React testing setup in this project.
+
+---
+
 ## Deviations from plan
 
 - TASK-17: No separate recruiter card renderer was needed — the standard `filteredPosts(posts, search)` loop already covers recruiters. The old seed data rendered a different table-style layout; after removal, recruiters render as standard post cards. This is the correct behavior per the task spec.
