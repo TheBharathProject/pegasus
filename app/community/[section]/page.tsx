@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { notFound, useParams } from "next/navigation";
+import { notFound, useParams, useRouter, useSearchParams } from "next/navigation";
 import { ProductFrame, CommunityTabs } from "@/components/frames";
 import {
   ChatIcon,
@@ -26,7 +26,8 @@ import {
   listCommunityPosts,
   type CommunitySurface
 } from "@/lib/community";
-import type { ApiCommunityPost } from "@/lib/api-client";
+import type { ApiApplicationPage, ApiCommunityPost } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 
 type SectionKey = "reviews" | "experiences" | "referrals" | "ask" | "recruiters";
 
@@ -98,18 +99,6 @@ const sectionMeta: Record<SectionKey, {
   }
 };
 
-const seedRecruiters = [
-  { recruiter: "Kriti Mahajan", title: "HR", company: "Clear", reviews: 0, upvotes: 1 },
-  { recruiter: "Swarnak", title: "—", company: "Microsoft", reviews: 0, upvotes: 1 },
-  { recruiter: "Siddhant Rawat", title: "HR", company: "Nagarro", reviews: 0, upvotes: 1 },
-  { recruiter: "Ankit Khare", title: "Talent Acquisition Strategist", company: "Trademo", reviews: 1, upvotes: 1 },
-  { recruiter: "Parul Pal", title: "—", company: "Stanza Living", reviews: 0, upvotes: 0 },
-  { recruiter: "Vishwakrma", title: "—", company: "Policybazaar.com", reviews: 0, upvotes: 0 },
-  { recruiter: "Garima Rai", title: "—", company: "Gartner", reviews: 0, upvotes: 0 },
-  { recruiter: "Roshan", title: "—", company: "Apollo.io", reviews: 0, upvotes: 0 },
-  { recruiter: "Yugal", title: "—", company: "PW (PhysicsWallah)", reviews: 0, upvotes: 0 },
-  { recruiter: "Tulsi Jha", title: "—", company: "GeeksforGeeks", reviews: 0, upvotes: 0 }
-];
 
 const ROUND_TYPES = [
   "Phone Screen",
@@ -121,23 +110,36 @@ const ROUND_TYPES = [
   "Onsite",
   "Hiring Manager",
   "HR",
+  "Group Discussion",
+  "Case Study",
+  "Culture Fit",
   "Other"
 ];
-const OUTCOMES = ["Offer", "Rejected", "In Progress", "Withdrew", "Ghosted"];
+const OUTCOMES = ["Offer", "Reject", "Ghosted", "InProgress", "Withdrew"];
+const OUTCOME_LABELS: Record<string, string> = {
+  Offer: "Offer",
+  Reject: "Rejected",
+  Ghosted: "Ghosted",
+  InProgress: "In Progress",
+  Withdrew: "Withdrew"
+};
 const DIFFICULTIES = ["Easy", "Medium", "Hard"];
 const TARGET_ROLES = [
-  "Frontend Engineer",
-  "Backend Engineer",
-  "Full-Stack Engineer",
-  "Mobile Engineer",
-  "Data Engineer",
-  "ML Engineer",
-  "DevOps / Platform",
-  "Product Manager",
-  "Designer",
+  "SDE",
+  "PM",
+  "Data Science",
+  "Design",
+  "DevOps",
+  "QA",
   "Other"
 ];
-const EXPERIENCE_LEVELS = ["Intern", "Entry Level", "Mid Level", "Senior", "Staff+", "Manager"];
+const EXPERIENCE_LEVELS = [
+  "Fresher",
+  "Junior (0-2)",
+  "Mid (2-5)",
+  "Senior (5+)",
+  "Lead (8+)"
+];
 const SPECIALIZATIONS = [
   "Backend",
   "Frontend",
@@ -316,6 +318,8 @@ export default function CommunitySectionPage() {
   const params = useParams<{ section: string }>();
   const section = (params?.section ?? "") as SectionKey;
   const meta = sectionMeta[section];
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -333,19 +337,28 @@ export default function CommunitySectionPage() {
   const [loadedOnce, setLoadedOnce] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Update a single URL query param without triggering a scroll reset.
+  // Pass an empty string to remove the key entirely.
+  const setFilter = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set(key, value); else params.delete(key);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3500);
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Fetch posts whenever the surface changes (e.g. nav between
-  // /community/ask and /community/experiences without a full reload).
+  // Fetch posts whenever the surface or relevant filter params change.
   useEffect(() => {
     if (!validSurface(section)) return;
     let cancelled = false;
     setLoadedOnce(false);
-    listCommunityPosts(section as CommunitySurface, { limit: 20 })
+    const sort = searchParams.get("sort") ?? undefined;
+    const outcome = searchParams.get("outcome") ?? undefined;
+    listCommunityPosts(section as CommunitySurface, { limit: 20, sort, outcome })
       .then((res) => {
         if (cancelled) return;
         setPosts(res.items);
@@ -360,12 +373,14 @@ export default function CommunitySectionPage() {
     return () => {
       cancelled = true;
     };
-  }, [section]);
+  }, [section, searchParams]);
 
   const refreshPosts = async () => {
     if (!validSurface(section)) return;
     try {
-      const res = await listCommunityPosts(section as CommunitySurface, { limit: 20 });
+      const sort = searchParams.get("sort") ?? undefined;
+      const outcome = searchParams.get("outcome") ?? undefined;
+      const res = await listCommunityPosts(section as CommunitySurface, { limit: 20, sort, outcome });
       setPosts(res.items);
     } catch {
       // Keep prior list; toast already showed success.
@@ -380,15 +395,8 @@ export default function CommunitySectionPage() {
     section === "experiences"
       ? communityExperiences.length
       : section === "recruiters"
-        ? seedRecruiters.length
+        ? posts.length
         : 0;
-
-  const filteredRecruiters = seedRecruiters.filter(
-    (r) =>
-      !search.trim() ||
-      r.recruiter.toLowerCase().includes(search.toLowerCase()) ||
-      r.company.toLowerCase().includes(search.toLowerCase())
-  );
 
   const filteredExperiences = communityExperiences.filter(
     (e) =>
@@ -465,11 +473,41 @@ export default function CommunitySectionPage() {
       ) : null}
 
       <div className="filters">
-        {meta.filters.map((filter) => (
-          <button type="button" className="filter-box" key={filter}>
-            {filter}
-          </button>
-        ))}
+        {meta.filters.map((filter) => {
+          // Map display labels to (key, value) pairs for URL state.
+          // Sort tabs: "Newest" → sort=newest, "Most Upvoted" → sort=votes,
+          // "Most Reviewed" → sort=most-reviewed. Outcome/role/level/tag
+          // filters clear their key when the "All …" sentinel is clicked.
+          let filterKey = "";
+          let filterValue = "";
+          if (filter === "Newest") { filterKey = "sort"; filterValue = "newest"; }
+          else if (filter === "Most Upvoted") { filterKey = "sort"; filterValue = "votes"; }
+          else if (filter === "Most Reviewed") { filterKey = "sort"; filterValue = "most-reviewed"; }
+          else if (filter === "All Outcomes") { filterKey = "outcome"; filterValue = ""; }
+          else if (filter === "All Roles") { filterKey = "role"; filterValue = ""; }
+          else if (filter === "All Levels") { filterKey = "level"; filterValue = ""; }
+          else if (filter === "All Companies") { filterKey = "company"; filterValue = ""; }
+          else if (filter === "All Tags") { filterKey = "tag"; filterValue = ""; }
+
+          const activeValue = filterKey ? searchParams.get(filterKey) : null;
+          const isActive =
+            filterKey === "sort"
+              ? activeValue === filterValue || (!activeValue && filter === "Newest")
+              : filterKey
+                ? activeValue === filterValue
+                : false;
+
+          return (
+            <button
+              type="button"
+              className={isActive ? "filter-box is-active" : "filter-box"}
+              key={filter}
+              onClick={() => filterKey ? setFilter(filterKey, filterValue) : undefined}
+            >
+              {filter}
+            </button>
+          );
+        })}
       </div>
 
       {section === "ask" ? (
@@ -500,7 +538,13 @@ export default function CommunitySectionPage() {
                     </p>
                   ) : null}
                   <p className="post-row-meta">
-                    <span>{post.authorName || "Anonymous"}</span>
+                    {post.authorSlug ? (
+                      <a href={`/u/${post.authorSlug}`} className="post-author-link" onClick={(e) => e.stopPropagation()}>
+                        {post.authorName || "Anonymous"}
+                      </a>
+                    ) : (
+                      <span>{post.authorName || "Anonymous"}</span>
+                    )}
                     <span aria-hidden>·</span>
                     <span>{fmtRelative(post.createdAt)}</span>
                     <span aria-hidden>·</span>
@@ -529,6 +573,7 @@ export default function CommunitySectionPage() {
 
       {openModal && section === "experiences" ? (
         <ExperienceModal
+          open={openModal}
           draft={experienceDraft}
           setDraft={setExperienceDraft}
           onClose={closeModal}
@@ -792,13 +837,27 @@ function ExperienceModal({
   draft,
   setDraft,
   onClose,
-  onSubmit
+  onSubmit,
+  open
 }: {
   draft: ExperienceDraft;
   setDraft: (d: ExperienceDraft) => void;
   onClose: () => void;
   onSubmit: () => void;
+  open: boolean;
 }) {
+  const [userApps, setUserApps] = useState<Array<{ id: string; company: string; role: string }>>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    api
+      .get<ApiApplicationPage>("/job-tracker/applications?limit=200")
+      .then((r) => setUserApps(r.items))
+      .catch(() => {
+        // Non-fatal: user can still enter company/role manually.
+      });
+  }, [open]);
+
   const updateRound = (id: number, patch: Partial<Round>) => {
     setDraft({
       ...draft,
@@ -836,9 +895,23 @@ function ExperienceModal({
           <label>Link to tracked application (optional)</label>
           <select
             value={draft.linkedApplication}
-            onChange={(e) => setDraft({ ...draft, linkedApplication: e.target.value })}
+            onChange={(e) => {
+              const id = e.target.value;
+              const selectedApp = userApps.find((a) => a.id === id);
+              setDraft({
+                ...draft,
+                linkedApplication: id,
+                company: selectedApp ? selectedApp.company : draft.company,
+                role: selectedApp ? (selectedApp.role || "") : draft.role
+              });
+            }}
           >
             <option value="">None — enter manually</option>
+            {userApps.map((app) => (
+              <option key={app.id} value={app.id}>
+                {app.company} — {app.role || "No role"}
+              </option>
+            ))}
           </select>
         </div>
         <div className="field">
@@ -883,7 +956,7 @@ function ExperienceModal({
           >
             <option value="">Select…</option>
             {OUTCOMES.map((o) => (
-              <option key={o}>{o}</option>
+              <option key={o} value={o}>{OUTCOME_LABELS[o] ?? o}</option>
             ))}
           </select>
         </div>

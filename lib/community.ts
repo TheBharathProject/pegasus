@@ -24,11 +24,13 @@ export type CommunitySurface =
 
 export async function listCommunityPosts(
   surface: CommunitySurface,
-  opts: { cursor?: string | null; limit?: number } = {}
+  opts: { cursor?: string | null; limit?: number; sort?: string; outcome?: string } = {}
 ): Promise<ApiCommunityListResponse> {
   const params = new URLSearchParams();
   if (opts.cursor) params.set("cursor", opts.cursor);
   if (opts.limit) params.set("limit", String(opts.limit));
+  if (opts.sort) params.set("sort", opts.sort);
+  if (opts.outcome) params.set("outcome", opts.outcome);
   const q = params.toString() ? `?${params.toString()}` : "";
   return api.get<ApiCommunityListResponse>(`/job-tracker/community/${surface}${q}`);
 }
