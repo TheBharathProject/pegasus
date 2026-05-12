@@ -34,7 +34,7 @@ export function MetricCard({
   return (
     <div className="metric-card">
       <p className="metric-label">{label}</p>
-      <h3>{value}</h3>
+      <h3 style={{ fontFamily: 'var(--font-mono)' }}>{value}</h3>
       <p className="muted small">{detail}</p>
     </div>
   );

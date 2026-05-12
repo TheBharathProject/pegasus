@@ -754,12 +754,20 @@ function ApplicationsInner() {
                       style={{
                         background:
                           stage === "INTERESTED"
-                            ? "#b9a87f"
-                            : stage === "OFFER"
-                              ? "#62c18b"
-                              : stage === "REJECTED"
-                                ? "#ef6f6c"
-                                : "#9094ff"
+                            ? "var(--stage-interested)"
+                            : stage === "APPLIED"
+                              ? "var(--stage-applied)"
+                              : stage === "PHONE_SCREEN"
+                                ? "var(--stage-phone)"
+                                : stage === "TECHNICAL"
+                                  ? "var(--stage-technical)"
+                                  : stage === "ONSITE"
+                                    ? "var(--stage-onsite)"
+                                    : stage === "OFFER"
+                                      ? "var(--stage-offer-tint)"
+                                      : stage === "REJECTED"
+                                        ? "var(--stage-rejected)"
+                                        : "var(--stage-interested)"
                       }}
                     />
                     {STAGE_LABELS[stage]}

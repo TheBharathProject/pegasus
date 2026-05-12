@@ -39,9 +39,22 @@
   --rule-high: #5a5a5a;
   --stage-interest: #efe7d2;
   --stage-screen: #232648;
-  --stage-applied: #1f2e27;
   --stage-offer: #d9f7e0;
   --stage-offer-ink: #17311c;
+  /* Kanban column tint tokens — one per pipeline stage. */
+  --stage-interested: #e0f2fe;
+  --stage-applied: #dbeafe;
+  --stage-phone: #fef9c3;
+  --stage-technical: #fed7aa;
+  --stage-onsite: #f3e8ff;
+  --stage-offer-tint: #dcfce7;
+  --stage-rejected: #fee2e2;
+  /* Utility tokens. */
+  --bg-hover: rgba(0,0,0,0.04);
+  --accent-soft: rgba(99,102,241,0.12);
+  --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  --radius-sm: 4px;
+  --radius-2xl: 16px;
   --max: 1180px;
   --shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
   --radius-xl: 20px;
@@ -96,6 +109,17 @@
   --rule-mid: #4a4a4a;
   --rule-high: #5a5a5a;
   --shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
+  /* Dark overrides for kanban stage tint tokens. */
+  --stage-interested: #1e3a5f;
+  --stage-applied: #1e3a5f;
+  --stage-phone: #3d3010;
+  --stage-technical: #3d1a00;
+  --stage-onsite: #2e1a47;
+  --stage-offer-tint: #14301e;
+  --stage-rejected: #3d1414;
+  /* Dark overrides for utility tokens. */
+  --bg-hover: rgba(255,255,255,0.06);
+  --accent-soft: rgba(99,102,241,0.20);
 }
 
 * {
