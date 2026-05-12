@@ -886,7 +886,7 @@ export default function SettingsPage() {
         <article className="settings-section">
           <h2>Browser extension</h2>
           <p className="muted small">
-            Save jobs from LinkedIn, Indeed, Naukri, or any careers page with one click. Each
+            Save jobs from LinkedIn, Instahyre, Naukri or any careers page with one click. Each
             browser you install the extension on needs its own token. Tokens never expire — revoke
             one to sign that browser out.{" "}
             <a

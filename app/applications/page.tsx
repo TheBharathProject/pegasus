@@ -596,7 +596,7 @@ function ApplicationsInner() {
       {showTip ? (
         <section className="notice">
           <span>
-            Tip — save jobs from LinkedIn, Indeed, or Naukri in one click with our{" "}
+            Tip — save jobs from LinkedIn, Instahyre, Naukri or any careers page in one click with our{" "}
             <a
               href="https://chromewebstore.google.com/detail/pegasus-%E2%80%94-job-clipper/oghjgddbopcpgdbpgijkkaabiaebedgp"
               target="_blank"
