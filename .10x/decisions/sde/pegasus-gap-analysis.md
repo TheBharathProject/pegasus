@@ -199,3 +199,91 @@
 
 TypeScript: `pnpm tsc --noEmit` — zero errors (verified before commit).
 No unit tests added — the changed code is UI event handlers and API wiring; behavior tests for these would require a React testing setup that is not present in this project. The type check provides compile-time coverage for all API call shapes.
+
+---
+
+## TASK-24 — Mobile CSS: breakpoints, iOS modal fix, hover gating, reduced-motion, touch targets, modal-content
+
+**Date:** 2026-05-12
+**Commit:** 0c47645
+**Files changed:** `app/globals.css`, `scripts/hover-gate.mjs` (new)
+
+### Part 0 — `.modal-content` class fix
+
+**Finding:** `ModalShell` (from TASK-23) uses `className="modal-content"` for the dialog box. There were zero `.modal-content` CSS rules — only `.modal-card` had styles. The ModalShell modals rendered unstyled.
+
+**Fix:**
+- Changed `.modal-card { ... }` selector to `.modal-card, .modal-content { ... }` — one combined rule sharing all the same box model, padding, border-radius, background, and box-shadow as the old `.modal-card`.
+- Changed `.modal-card h2 { ... }` to `.modal-card h2, .modal-content h2 { ... }` — ensures serif heading style inside both.
+- In the responsive `@media (max-width: 767px)` block, extended the override: `.modal-card, .modal-content { width: 100%; ... }`.
+
+**No `.modal-card` → `.modal-content` rename** — old modal-card sites still exist in HTML (kanban cards, etc.), so both selectors need to live together.
+
+### Part 1 — Breakpoint replacement
+
+- **Before:** 9 occurrences of `@media (max-width: 720px)`, 0 occurrences of `@media (min-width: 720px)`
+- **After:** 0 occurrences of `@media (max-width: 720px)`, 9 occurrences of `@media (max-width: 767px)`
+- **Protected values:** `width: min(100%, 720px)` (line 1399, modal card max-width) and `max-width: 720px` (line 6498, layout cap) were NOT changed — confirmed by grep.
+- Replacement done with `sed -i ''` for precision; no manual edits.
+
+### Part 2 — iOS Safari modal fix
+
+Applied to the single primary `.modal-backdrop` rule (the responsive override only adjusts `padding` and `align-items` for narrow screens):
+- Changed `place-items: center` → `place-items: start center`
+- Replaced `padding: 24px` shorthand with individual `padding-top: 8svh; padding-right: 24px; padding-bottom: 24px; padding-left: 24px`
+- `.ai-modal-backdrop` inherits these values since it only overrides `z-index` and `background`.
+
+### Part 3 — Hover gating
+
+- **Script:** `scripts/hover-gate.mjs` — reads globals.css, finds all `:hover` rule blocks including multi-line selectors, wraps each in `@media (hover: hover) { ... }`.
+- **Before:** 106 `:hover` occurrences across 103 distinct rule blocks.
+- **After:** 106 `:hover` occurrences (count unchanged), 103 `@media (hover: hover)` blocks added.
+- 3 hover rules that were already inside other `@media` blocks (lines ~8195, ~9782, ~9810) received nested `@media (hover: hover)` — nested @media is valid CSS (Nesting Level 5) and supported by Chrome 112+, Firefox 117+, Safari 16.5+.
+- The script verified counts before aborting write if the count changed.
+
+### Part 4 — Reduced-motion wrappers
+
+Added `@media (prefers-reduced-motion: no-preference)` blocks around:
+1. `.product-frame { transition: grid-template-columns 220ms cubic-bezier(0.4, 0, 0.2, 1) }` — sidebar collapse animation
+2. `.ghost-button, .primary-button, .icon-button, .segmented-button { transition: 140ms ease }` — all button hover transitions
+
+Other transitions (opacity fades, color changes, focus rings) are short-duration (≤180ms) and intentionally not gated — they serve functional feedback rather than decorative motion.
+
+No modal fade-in `@keyframes` exists in the file (TASK-23's `ModalShell` doesn't add one), so no `animation:` rule to gate.
+
+### Part 5 — Touch targets
+
+Added `position: relative` to the existing `.icon-button` rule and a new `.icon-button::before` rule:
+```css
+.icon-button::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+}
+```
+Result: visual size remains 32px; tap target expands to 52px (32 + 20) — above the 44px WCAG minimum.
+
+### Deviations from plan
+
+- The senior engineer's notes said "3 `.modal-backdrop` definitions" (lines 1312, 8095, 10193). In the actual file there were only 2 `.modal-backdrop` selectors; the third was `.ai-modal-backdrop` (a variant class). The iOS fix was applied only to the primary `.modal-backdrop` rule — `.ai-modal-backdrop` inherits correctly through the cascade.
+- The plan mentioned wrapping modal fade-in animation in `prefers-reduced-motion`. No such animation exists in the file (no `@keyframes` on modal backdrop). Noted but no action needed.
+
+### Tech debt created
+
+- Nested `@media (hover: hover)` inside other `@media` blocks: valid spec but relies on modern browser CSS nesting support (Chrome 112+, Safari 16.5+, Firefox 117+). Pre-2023 browsers would see the hover effects on all devices. Severity: LOW — the project's target audience is modern browsers; the fallback is hover effects on touch (current behavior), not broken functionality.
+- `place-items: start center` shifts modals toward the top of the viewport even on desktop. On large-content modals this may look slightly high. Can be adjusted with `padding-top` on a per-modal basis if needed. Severity: LOW.
+
+### Evidence
+
+```
+grep -c ':hover' app/globals.css           → 106 (before and after)
+grep -c '@media (hover: hover)' app/globals.css → 103
+grep -c '@media (max-width: 767px)' app/globals.css → 9
+grep -c '@media (max-width: 720px)' app/globals.css → 0
+grep -c 'prefers-reduced-motion' app/globals.css → 2
+grep -c 'modal-content' app/globals.css    → 3
+grep -c 'place-items: start center' app/globals.css → 1
+grep -c 'padding-top: 8svh' app/globals.css → 1
+grep -c 'icon-button::before' app/globals.css → 1
+pnpm tsc --noEmit → zero errors
+```
