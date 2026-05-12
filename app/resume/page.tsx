@@ -25,6 +25,14 @@ type AIUsage = {
 
 const steps = ["Upload", "Level", "Job Info", "Results"];
 
+const LEVELS = [
+  { value: "Fresher", label: "Fresher (0 YOE)" },
+  { value: "Junior", label: "Junior (0–2 YOE)" },
+  { value: "Mid", label: "Mid (2–5 YOE)" },
+  { value: "Senior", label: "Senior (5+ YOE)" },
+  { value: "Lead", label: "Lead (8+ YOE)" }
+];
+
 export default function ResumeAiPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -35,6 +43,12 @@ export default function ResumeAiPage() {
   const [report, setReport] = useState<AIReport | null>(null);
   const [usage, setUsage] = useState<AIUsage | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Wizard step 1 — level
+  const [level, setLevel] = useState("");
+  // Wizard step 2 — job context
+  const [targetRole, setTargetRole] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined" && !isAuthed()) {
@@ -58,11 +72,48 @@ export default function ResumeAiPage() {
     setStepIndex(1);
   };
 
-  const generateFromText = async (text: string) => {
+  const handleTextContinue = () => {
+    if (!pastedText.trim()) return;
+    setStepIndex(1);
+  };
+
+  const generate = async () => {
     setBusy(true);
     setError(null);
     try {
-      const r = await api.post<AIReport>("/job-tracker/ai/resume/report", { text });
+      const extra = { level, targetRole, jobDescription };
+      let r: AIReport;
+      if (pasteMode) {
+        r = await api.post<AIReport>("/job-tracker/ai/resume/report", {
+          text: pastedText,
+          ...extra
+        });
+      } else if (file) {
+        // Upload file first, then generate
+        const upload = await api.post<{ uploadUrl: string; file: { id: string } }>(
+          "/job-tracker/resumes/upload-url",
+          {
+            kind: "resume",
+            fileName: file.name,
+            fileSize: file.size,
+            mimeType: file.type || "application/pdf",
+            label: "AI Source"
+          }
+        );
+        const putRes = await fetch(upload.uploadUrl, {
+          method: "PUT",
+          body: file,
+          headers: { "Content-Type": file.type || "application/pdf" }
+        });
+        if (!putRes.ok) throw new Error(`R2 upload failed: ${putRes.status}`);
+        await api.patch(`/job-tracker/resumes/${upload.file.id}/finalize`, { fileSize: file.size });
+        r = await api.post<AIReport>("/job-tracker/ai/resume/report", {
+          fileId: upload.file.id,
+          ...extra
+        });
+      } else {
+        throw new Error("No resume provided");
+      }
       setReport(r);
       setStepIndex(3);
       api.get<AIUsage>("/job-tracker/ai/usage").then(setUsage).catch(() => {});
@@ -73,38 +124,14 @@ export default function ResumeAiPage() {
     }
   };
 
-  const generateFromFile = async (f: File) => {
-    setBusy(true);
+  const resetWizard = () => {
+    setStepIndex(0);
+    setFile(null);
+    setPastedText("");
+    setLevel("");
+    setTargetRole("");
+    setJobDescription("");
     setError(null);
-    try {
-      const upload = await api.post<{ uploadUrl: string; file: { id: string } }>(
-        "/job-tracker/resumes/upload-url",
-        {
-          kind: "resume",
-          fileName: f.name,
-          fileSize: f.size,
-          mimeType: f.type || "application/pdf",
-          label: "AI Source"
-        }
-      );
-      const putRes = await fetch(upload.uploadUrl, {
-        method: "PUT",
-        body: f,
-        headers: { "Content-Type": f.type || "application/pdf" }
-      });
-      if (!putRes.ok) throw new Error(`R2 upload failed: ${putRes.status}`);
-      await api.patch(`/job-tracker/resumes/${upload.file.id}/finalize`, { fileSize: f.size });
-      const r = await api.post<AIReport>("/job-tracker/ai/resume/report", {
-        fileId: upload.file.id
-      });
-      setReport(r);
-      setStepIndex(3);
-      api.get<AIUsage>("/job-tracker/ai/usage").then(setUsage).catch(() => {});
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
   };
 
   return (
@@ -119,7 +146,7 @@ export default function ResumeAiPage() {
           ))}
         </div>
 
-        {report ? (
+        {report && stepIndex !== 3 ? (
           <div
             className="last-report"
             onClick={() => setStepIndex(3)}
@@ -154,6 +181,7 @@ export default function ResumeAiPage() {
           </section>
         ) : null}
 
+        {/* Step 3 — Results */}
         {stepIndex === 3 && report ? (
           <article className="settings-section" style={{ marginTop: 24 }}>
             <div className="list-head">
@@ -166,11 +194,7 @@ export default function ResumeAiPage() {
               <button
                 className="ghost-button"
                 type="button"
-                onClick={() => {
-                  setStepIndex(0);
-                  setFile(null);
-                  setPastedText("");
-                }}
+                onClick={resetWizard}
               >
                 Run another analysis
               </button>
@@ -186,7 +210,91 @@ export default function ResumeAiPage() {
               dangerouslySetInnerHTML={{ __html: renderMarkdown(report.reportMd) }}
             />
           </article>
+        ) : stepIndex === 2 ? (
+          /* Step 2 — Job Info */
+          <div style={{ width: "min(560px, 100%)", margin: "32px auto 0" }}>
+            <div style={{ textAlign: "center" }}>
+              <h1 style={{ fontSize: 28, fontWeight: 400, fontFamily: "var(--font-serif-stack)" }}>
+                What role are you targeting?
+              </h1>
+              <p className="muted" style={{ marginTop: 8 }}>
+                Optional — but more context means a sharper report.
+              </p>
+            </div>
+            <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+              <div className="field">
+                <label>Target role</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Senior Backend Engineer"
+                  value={targetRole}
+                  onChange={(e) => setTargetRole(e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label>Job description</label>
+                <textarea
+                  className="feedback-box"
+                  style={{ minHeight: 140 }}
+                  placeholder="Paste the JD here for tailored feedback…"
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                />
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 20 }}>
+              <button className="ghost-button" type="button" onClick={() => setStepIndex(1)}>
+                Back
+              </button>
+              <button
+                className="primary-button"
+                type="button"
+                disabled={busy}
+                onClick={() => void generate()}
+              >
+                {busy ? "Analyzing…" : "Generate report"}
+              </button>
+            </div>
+          </div>
+        ) : stepIndex === 1 ? (
+          /* Step 1 — Level */
+          <div style={{ width: "min(480px, 100%)", margin: "32px auto 0" }}>
+            <div style={{ textAlign: "center" }}>
+              <h1 style={{ fontSize: 28, fontWeight: 400, fontFamily: "var(--font-serif-stack)" }}>
+                What&apos;s your experience level?
+              </h1>
+              <p className="muted" style={{ marginTop: 8 }}>
+                We calibrate the feedback to where you are in your career.
+              </p>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 24 }}>
+              {LEVELS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={level === value ? "primary-button" : "ghost-button"}
+                  style={{ textAlign: "left", justifyContent: "flex-start", width: "100%", padding: "12px 16px" }}
+                  onClick={() => setLevel(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 20 }}>
+              <button className="ghost-button" type="button" onClick={() => setStepIndex(0)}>
+                Back
+              </button>
+              <button
+                className="primary-button"
+                type="button"
+                onClick={() => setStepIndex(2)}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
         ) : (
+          /* Step 0 — Upload */
           <>
             <div style={{ textAlign: "center" }}>
               <h1 style={{ fontSize: 36, fontWeight: 400, fontFamily: "var(--font-serif-stack)" }}>
@@ -213,10 +321,10 @@ export default function ResumeAiPage() {
                   <button
                     className="primary-button"
                     type="button"
-                    disabled={!pastedText.trim() || busy}
-                    onClick={() => generateFromText(pastedText)}
+                    disabled={!pastedText.trim()}
+                    onClick={handleTextContinue}
                   >
-                    {busy ? "Analyzing…" : "Continue"}
+                    Continue
                   </button>
                 </div>
               </div>
@@ -230,7 +338,6 @@ export default function ResumeAiPage() {
                     e.preventDefault();
                     const f = e.dataTransfer.files?.[0] ?? null;
                     handleFile(f);
-                    if (f) generateFromFile(f);
                   }}
                 >
                   <div>
@@ -238,10 +345,10 @@ export default function ResumeAiPage() {
                       <UploadIcon />
                     </div>
                     <strong style={{ color: "#ececea", fontSize: 16 }}>
-                      {busy ? "Working…" : file ? file.name : "Drop your resume PDF here"}
+                      {file ? file.name : "Drop your resume PDF here"}
                     </strong>
                     <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>
-                      {file ? `${Math.round(file.size / 1024)} KB · ready to analyze` : "or click to browse"}
+                      {file ? `${Math.round(file.size / 1024)} KB · ready to continue` : "or click to browse"}
                     </p>
                     <p
                       className="muted small"
@@ -253,10 +360,7 @@ export default function ResumeAiPage() {
                     >
                       We extract the text and never store the file.
                     </p>
-                    <p
-                      className="muted small"
-                      style={{ marginTop: 6 }}
-                    >
+                    <p className="muted small" style={{ marginTop: 6 }}>
                       Free within your monthly AI quota; beyond that,{" "}
                       <strong>{CREDIT_COSTS.resumeReport} credits</strong>.
                     </p>
@@ -271,7 +375,6 @@ export default function ResumeAiPage() {
                   onChange={(e) => {
                     const f = e.target.files?.[0] ?? null;
                     handleFile(f);
-                    if (f) generateFromFile(f);
                     e.target.value = "";
                   }}
                 />

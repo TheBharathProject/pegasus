@@ -11,12 +11,14 @@ import {
   api,
   apiBaseUrl,
   type ApiApplication,
+  type ApiApplicationPage,
   type ApiStageChange
 } from "@/lib/api-client";
 import { CREDIT_COSTS } from "@/lib/billing";
 import { getToken, isAuthed } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 import {
+  BellIcon,
   BoardIcon,
   CloseIcon,
   DownloadIcon,
@@ -129,6 +131,8 @@ function ApplicationsInner() {
   const viewParam = searchParams?.get("view") ?? null;
 
   const [items, setItems] = useState<ApiApplication[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "board">("list");
@@ -175,6 +179,13 @@ function ApplicationsInner() {
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
+  // Reminders
+  const [reminderApp, setReminderApp] = useState<ApiApplication | null>(null);
+  const [reminderAt, setReminderAt] = useState("");
+  const [reminderNote, setReminderNote] = useState("");
+  const [reminderBusy, setReminderBusy] = useState(false);
+  const [reminderError, setReminderError] = useState<string | null>(null);
+
   const viewingApp = useMemo(
     () => items.find((a) => a.id === viewingId) ?? null,
     [items, viewingId]
@@ -183,13 +194,30 @@ function ApplicationsInner() {
   const refresh = async () => {
     try {
       setLoading(true);
-      const apps = await api.get<ApiApplication[]>("/job-tracker/applications");
-      setItems(apps);
+      const page = await api.get<ApiApplicationPage>("/job-tracker/applications");
+      setItems(page.items);
+      setNextCursor(page.nextCursor ?? null);
       setError(null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await api.get<ApiApplicationPage>(
+        `/job-tracker/applications?cursor=${encodeURIComponent(nextCursor)}`
+      );
+      setItems((prev) => [...prev, ...page.items]);
+      setNextCursor(page.nextCursor ?? null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -635,6 +663,21 @@ function ApplicationsInner() {
                       <button
                         className="icon-button"
                         type="button"
+                        aria-label={`Set reminder for ${application.company}`}
+                        title="Set reminder"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReminderApp(application);
+                          setReminderAt("");
+                          setReminderNote("");
+                          setReminderError(null);
+                        }}
+                      >
+                        <BellIcon width={14} height={14} />
+                      </button>
+                      <button
+                        className="icon-button"
+                        type="button"
                         aria-label={`Edit ${application.company}`}
                         title="Edit"
                         onClick={(e) => {
@@ -662,6 +705,18 @@ function ApplicationsInner() {
               )}
             </tbody>
           </table>
+          {nextCursor ? (
+            <div style={{ textAlign: "center", paddingTop: 16 }}>
+              <button
+                className="ghost-button"
+                type="button"
+                disabled={loadingMore}
+                onClick={() => void loadMore()}
+              >
+                {loadingMore ? "Loading…" : "Load more"}
+              </button>
+            </div>
+          ) : null}
         </section>
       ) : (
         <section className="board-grid" aria-label="Applications board">
@@ -1313,6 +1368,115 @@ function ApplicationsInner() {
                 onClick={handleGenerateTweak}
               >
                 {aiBusy ? "Generating…" : tweakParentId ? "Generate next version" : "Generate"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {reminderApp ? (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reminder-modal-title"
+          onClick={() => setReminderApp(null)}
+        >
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="list-head">
+              <h2 id="reminder-modal-title">
+                Set reminder · {reminderApp.company}
+              </h2>
+              <button
+                className="icon-button"
+                aria-label="Close"
+                type="button"
+                onClick={() => setReminderApp(null)}
+              >
+                <CloseIcon width={14} height={14} />
+              </button>
+            </div>
+            <div className="form-grid">
+              <div className="field" style={{ gridColumn: "1 / -1" }}>
+                <label>Quick pick</label>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {[
+                    { label: "Tomorrow", days: 1 },
+                    { label: "In 3 days", days: 3 },
+                    { label: "In 1 week", days: 7 },
+                    { label: "In 2 weeks", days: 14 }
+                  ].map(({ label, days }) => {
+                    const ts = new Date(Date.now() + days * 86_400_000);
+                    ts.setHours(9, 0, 0, 0);
+                    const iso = ts.toISOString().slice(0, 16);
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        className={reminderAt === iso ? "primary-button" : "ghost-button"}
+                        style={{ fontSize: 13 }}
+                        onClick={() => setReminderAt(iso)}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="field" style={{ gridColumn: "1 / -1" }}>
+                <label>Custom date &amp; time</label>
+                <input
+                  type="datetime-local"
+                  value={reminderAt}
+                  onChange={(e) => setReminderAt(e.target.value)}
+                />
+              </div>
+              <div className="field" style={{ gridColumn: "1 / -1" }}>
+                <label>Note (optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Follow up on interview feedback"
+                  value={reminderNote}
+                  onChange={(e) => setReminderNote(e.target.value)}
+                />
+              </div>
+              {reminderError ? (
+                <p className="muted small" style={{ color: "var(--danger)", gridColumn: "1 / -1" }}>
+                  {reminderError}
+                </p>
+              ) : null}
+            </div>
+            <div className="ai-modal-foot">
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => setReminderApp(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="primary-button"
+                type="button"
+                disabled={!reminderAt || reminderBusy}
+                onClick={async () => {
+                  if (!reminderApp || !reminderAt) return;
+                  setReminderBusy(true);
+                  setReminderError(null);
+                  try {
+                    const ts = new Date(reminderAt).toISOString();
+                    await api.post(
+                      `/job-tracker/applications/${reminderApp.id}/reminders`,
+                      { triggersAt: ts, note: reminderNote || undefined }
+                    );
+                    setReminderApp(null);
+                  } catch (e) {
+                    setReminderError((e as Error).message);
+                  } finally {
+                    setReminderBusy(false);
+                  }
+                }}
+              >
+                {reminderBusy ? "Saving…" : "Set reminder"}
               </button>
             </div>
           </div>

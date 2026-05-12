@@ -371,3 +371,29 @@ export type ApiCoverLettersResponse = {
   count: number;
   limit: number;
 };
+
+export type ApiRecruiter = {
+  id: string;
+  name: string;
+  email: string;
+  company?: string;
+  linkedinUrl?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ApiReminder = {
+  id: string;
+  applicationId: string;
+  triggersAt: string;
+  note?: string;
+  firedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ApiApplicationPage = {
+  items: ApiApplication[];
+  nextCursor?: string;
+};

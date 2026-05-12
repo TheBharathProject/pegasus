@@ -39,7 +39,8 @@ type ProductNavKey =
   | "resumes"
   | "notifications"
   | "settings"
-  | "community";
+  | "community"
+  | "recruiters";
 
 type ProductFrameProps = {
   children: ReactNode;
@@ -79,6 +80,7 @@ const productNavGroups: Array<{ label?: string; links: NavLink[] }> = [
     links: [
       { href: "/resume", label: "Resume AI", key: "resume", Icon: FileIcon },
       { href: "/resumes", label: "Vault", key: "resumes", Icon: FolderIcon },
+      { href: "/recruiters", label: "Recruiters", key: "recruiters", Icon: ContactIcon },
       { href: "/notifications", label: "Notifications", key: "notifications", Icon: BellIcon },
       { href: "/settings", label: "Settings", key: "settings", Icon: SettingsIcon }
     ]

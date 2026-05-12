@@ -58,12 +58,12 @@ export default function DashboardPage() {
     Promise.all([
       api.get<ApiUser>("/job-tracker/me"),
       api.get<ApiDashboard>("/job-tracker/analytics/dashboard"),
-      api.get<ApiApplication[]>("/job-tracker/applications")
+      api.get<{ items: ApiApplication[] }>("/job-tracker/applications")
     ])
-      .then(([u, m, apps]) => {
+      .then(([u, m, page]) => {
         setUser(u);
         setMetrics(m);
-        setApplications(apps);
+        setApplications(page.items ?? []);
       })
       .catch((e: Error) => setError(e.message));
   }, []);
@@ -283,12 +283,12 @@ export default function DashboardPage() {
           </h2>
           <p>Pipeline stages, notes, and the slow honest math of your search.</p>
         </Link>
-        <Link className="quick-card" href="/profile">
-          <p className="eyebrow">Build</p>
+        <Link className="quick-card" href="/recruiters">
+          <p className="eyebrow">Connect</p>
           <h2>
-            Your profile <ArrowRightIcon width={18} height={18} />
+            Your recruiters <ArrowRightIcon width={18} height={18} />
           </h2>
-          <p>The handful of details we&apos;ll reuse across every resume and cover letter.</p>
+          <p>Your private CRM for recruiter contacts — separate from the community directory.</p>
         </Link>
       </section>
     </ProductFrame>

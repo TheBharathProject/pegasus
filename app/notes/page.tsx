@@ -118,6 +118,8 @@ export default function NotesPage() {
   const [notes, setNotes] = useState<ApiNoteListItem[]>([]);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
+  const [renamingCategoryId, setRenamingCategoryId] = useState<string | null>(null);
+  const [renamingCategoryName, setRenamingCategoryName] = useState("");
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("split");
@@ -665,6 +667,22 @@ export default function NotesPage() {
     }
   };
 
+  const saveRename = async () => {
+    if (!renamingCategoryId || !renamingCategoryName.trim()) return;
+    const cat = categories.find((c) => c.id === renamingCategoryId);
+    try {
+      await api.patch(`/job-tracker/notes/categories/${renamingCategoryId}`, {
+        name: renamingCategoryName.trim(),
+        color: cat?.color ?? ""
+      });
+      await refresh();
+    } catch (e) {
+      window.alert(`Rename failed: ${(e as Error).message}`);
+    } finally {
+      setRenamingCategoryId(null);
+    }
+  };
+
   // -------- keyboard --------
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const meta = e.metaKey || e.ctrlKey;
@@ -829,22 +847,45 @@ export default function NotesPage() {
             </button>
             {sortedChipCategories.map((c) => {
               const count = counts[c.id] ?? 0;
+              const isRenaming = renamingCategoryId === c.id;
               return (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={
-                    (activeCategoryId === c.id ? "nx-cat is-active" : "nx-cat") +
-                    (count === 0 ? " is-empty" : "")
-                  }
-                  onClick={() => setActiveCategoryId(c.id)}
-                >
-                  <span className="nx-cat-label">
-                    <span className="nx-dot" style={{ background: c.color || "#9094ff" }} />
-                    <span>{c.name}</span>
-                  </span>
-                  <span className="nx-cat-count">{count}</span>
-                </button>
+                <div key={c.id} className={
+                  (activeCategoryId === c.id ? "nx-cat is-active" : "nx-cat") +
+                  (count === 0 ? " is-empty" : "")
+                } style={{ display: "flex", alignItems: "center" }}>
+                  {isRenaming ? (
+                    <form
+                      style={{ display: "flex", flex: 1, gap: 4 }}
+                      onSubmit={(e) => { e.preventDefault(); void saveRename(); }}
+                    >
+                      <input
+                        autoFocus
+                        value={renamingCategoryName}
+                        onChange={(e) => setRenamingCategoryName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Escape") setRenamingCategoryId(null); }}
+                        style={{ flex: 1, fontSize: 12, padding: "2px 6px", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 4, color: "var(--fg)" }}
+                      />
+                      <button type="submit" className="nx-icon-btn" aria-label="Save" style={{ fontSize: 11 }}>✓</button>
+                      <button type="button" className="nx-icon-btn" aria-label="Cancel" style={{ fontSize: 11 }} onClick={() => setRenamingCategoryId(null)}>✕</button>
+                    </form>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        style={{ flex: 1, background: "none", border: 0, padding: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                        onClick={() => setActiveCategoryId(c.id)}
+                        onDoubleClick={() => { setRenamingCategoryId(c.id); setRenamingCategoryName(c.name); }}
+                        title="Double-click to rename"
+                      >
+                        <span className="nx-cat-label">
+                          <span className="nx-dot" style={{ background: c.color || "#9094ff" }} />
+                          <span>{c.name}</span>
+                        </span>
+                        <span className="nx-cat-count">{count}</span>
+                      </button>
+                    </>
+                  )}
+                </div>
               );
             })}
           </nav>
