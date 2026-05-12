@@ -79,6 +79,48 @@
 
 ---
 
+---
+
+## TASK-21 — Add "Download PDF" buttons
+
+**Date:** 2026-05-12
+**Commit:** c4a0af0
+
+**Files changed:**
+- `lib/api-client.ts` — added exported `downloadPDF(endpoint, body, filename)` helper
+- `app/applications/page.tsx` — cover letter text capture + inline display + Download PDF button; tweak result Download PDF button
+- `app/resume/page.tsx` — Download report button in step 3 results panel
+
+**What was built:**
+
+1. `downloadPDF` helper (lib/api-client.ts, line 402): Uses `getToken()` and `NEXT_PUBLIC_API_BASE_URL`, issues GET or POST based on whether `body` is null, blobs the response and triggers an anchor-click download. Uses the existing `BASE_URL` pattern already in the file (not a separate `getToken` + `process.env` call as in the spec, but functionally identical).
+
+2. Cover letter modal (app/applications/page.tsx):
+   - Added `coverLetterText` state (string | null)
+   - `openCoverDialog` now resets `coverLetterText` to null
+   - `handleGenerateCover` updated: captures response `text` or `coverLetterText` field; does not close dialog or alert on success — instead stays open showing the generated text
+   - Inside `ai-modal-body`: when `coverLetterText` is set, renders a `<pre>` block with the text (max-height 320, overflow scroll)
+   - Inside `ai-modal-foot`: when `coverLetterText` is set, renders "Download PDF" ghost-button that calls `downloadPDF("/job-tracker/ai/cover-letter/pdf", { text, company, role }, "cover-letter.pdf")`
+
+3. Resume tweak result panel (app/applications/page.tsx):
+   - In the `tweakResult` block, added a "Download PDF" ghost-button next to "Continue tweaking this version"
+   - Calls `downloadPDF("/job-tracker/ai/resume/tweaks/${tweakResult.id}/pdf", null, "resume-tweak.pdf")`
+
+4. Resume report step 3 (app/resume/page.tsx):
+   - `downloadPDF` imported alongside existing imports
+   - In the step-3 header (`list-head`), wrapped the "Run another analysis" button in a flex div and prepended a "Download report" ghost-button
+   - Calls `downloadPDF("/job-tracker/ai/resume/report/latest/pdf", null, "resume-report-{date}.pdf")`
+
+**Deviation from plan:**
+- The spec showed `handleGenerateCover` should close the dialog after generation. Instead the dialog stays open showing the generated text so the user can read it before downloading. This is strictly better UX — close button still works.
+- `downloadPDF` uses `BASE_URL` variable already computed at module level (with trailing-slash strip) rather than re-reading `process.env.NEXT_PUBLIC_API_BASE_URL` inline. Identical outcome.
+
+**Tech debt:** None created. The `coverLetterText` state is scoped to the same component; no new abstractions needed.
+
+**Test coverage:** `pnpm tsc --noEmit` — zero errors. No unit tests added (no React testing setup in this project; same rationale as prior tasks).
+
+---
+
 ## Deviations from plan
 
 - TASK-17: No separate recruiter card renderer was needed — the standard `filteredPosts(posts, search)` loop already covers recruiters. The old seed data rendered a different table-style layout; after removal, recruiters render as standard post cards. This is the correct behavior per the task spec.
