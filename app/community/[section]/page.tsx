@@ -491,7 +491,7 @@ export default function CommunitySectionPage() {
         <ul className="post-list">
           {filteredPosts(posts, search).map((post) => (
             <li key={post.id}>
-              <Link className="post-row" href={`/community/posts/${post.id}`}>
+              <Link className="post-row" href={`/community/posts/${post.slug || post.id}`}>
                 <div className="post-row-body">
                   <h3 className="post-row-title">{post.title}</h3>
                   {post.body ? (

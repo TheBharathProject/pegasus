@@ -332,6 +332,7 @@ export type ApiCommunityPost = {
   userId: string;
   authorName: string;
   authorSlug?: string;
+  slug: string;
   surface: "reviews" | "experiences" | "referrals" | "ask" | "recruiters";
   title: string;
   body?: string;
