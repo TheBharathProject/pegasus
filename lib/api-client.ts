@@ -379,10 +379,16 @@ export type ApiRecruiter = {
   email: string;
   company?: string;
   linkedinUrl?: string;
-  phone?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
+};
+
+// Phone is served by a dedicated rate-limited endpoint
+// (GET /job-tracker/recruiters/{id}/phone) to protect sensitive contact data.
+// Limits: 5 reveals per 5 minutes, 20 per day. Server returns 429 on excess.
+export type ApiRecruiterPhone = {
+  phone: string | null;
 };
 
 export type ApiReminder = {

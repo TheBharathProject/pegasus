@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ProductFrame } from "@/components/frames";
 import { ModalShell } from "@/components/ui";
 import { ContactIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "@/components/icons";
-import { api, type ApiRecruiter } from "@/lib/api-client";
+import { api, ApiError, type ApiRecruiter, type ApiRecruiterPhone } from "@/lib/api-client";
 import { isAuthed } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 
@@ -27,6 +27,9 @@ export default function RecruitersPage() {
   const [draft, setDraft] = useState(EMPTY_DRAFT);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // Phone is fetched on-demand when a card opens — never returned with list/get.
+  const [phoneLoading, setPhoneLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && !isAuthed()) {
@@ -72,16 +75,34 @@ export default function RecruitersPage() {
       email: r.email,
       company: r.company ?? "",
       linkedinUrl: r.linkedinUrl ?? "",
-      phone: r.phone ?? "",
+      phone: "",
       notes: r.notes ?? ""
     });
     setFormError(null);
+    setPhoneError(null);
+    setPhoneLoading(true);
     setShowModal(true);
+    void (async () => {
+      try {
+        const res = await api.get<ApiRecruiterPhone>(`/job-tracker/recruiters/${r.id}/phone`);
+        setDraft((d) => ({ ...d, phone: res.phone ?? "" }));
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 429) {
+          setPhoneError(e.message);
+        } else {
+          setPhoneError("Could not load phone number.");
+        }
+      } finally {
+        setPhoneLoading(false);
+      }
+    })();
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingId(null);
+    setPhoneError(null);
+    setPhoneLoading(false);
   };
 
   const handleSave = async () => {
@@ -96,14 +117,20 @@ export default function RecruitersPage() {
     setBusy(true);
     setFormError(null);
     try {
-      const body = {
+      // Skip the phone field when editing if we never successfully loaded it
+      // (loading-in-flight or rate-limited) — otherwise we'd clobber the
+      // stored value with whatever's currently in the input.
+      const includePhone = !editingId || (!phoneLoading && !phoneError);
+      const body: Record<string, unknown> = {
         name: draft.name.trim(),
         email: draft.email.trim(),
         company: draft.company.trim() || undefined,
         linkedinUrl: draft.linkedinUrl.trim() || undefined,
-        phone: draft.phone.trim() || undefined,
         notes: draft.notes.trim() || undefined
       };
+      if (includePhone) {
+        body.phone = draft.phone.trim() || undefined;
+      }
       if (editingId) {
         await api.patch(`/job-tracker/recruiters/${editingId}`, body);
       } else {
@@ -286,10 +313,16 @@ export default function RecruitersPage() {
             <label>Phone</label>
             <input
               type="tel"
-              placeholder="+91 98765 43210"
+              placeholder={phoneLoading ? "Loading…" : phoneError ? "Unavailable" : "+91 98765 43210"}
               value={draft.phone}
+              disabled={phoneLoading || !!phoneError}
               onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
             />
+            {phoneError ? (
+              <p className="muted small" style={{ color: "var(--danger)", marginTop: 6 }}>
+                {phoneError}
+              </p>
+            ) : null}
           </div>
           <div className="field" style={{ gridColumn: "1 / -1" }}>
             <label>Notes</label>
