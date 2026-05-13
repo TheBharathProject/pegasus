@@ -117,13 +117,18 @@ export default function ResumesPage() {
       setVault({ resumes, covers: c.coverLetters ?? [] });
       // Fan out usage queries — small N (5 max), parallel, ignore individual
       // failures so one stuck request doesn't blank the whole vault badges.
+      // Skip unslotted files (e.g. "AI Source" uploads from the Resume AI
+      // page): the Vault UI only renders the 5 slots, so /usage for an
+      // invisible file is a wasted request and no badge consumes the count.
       const counts = await Promise.all(
-        resumes.map((f) =>
-          api
-            .get<{ aiReports: number }>(`/job-tracker/resumes/${f.id}/usage`)
-            .then((u) => [f.id, u.aiReports] as const)
-            .catch(() => [f.id, 0] as const)
-        )
+        resumes
+          .filter((f) => f.slot != null)
+          .map((f) =>
+            api
+              .get<{ aiReports: number }>(`/job-tracker/resumes/${f.id}/usage`)
+              .then((u) => [f.id, u.aiReports] as const)
+              .catch(() => [f.id, 0] as const)
+          )
       );
       setUsage(Object.fromEntries(counts));
     } catch {
