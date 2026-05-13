@@ -10,6 +10,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   basePath: "/pegasus",
+  // Disable React Strict Mode's dev-only double-invoke of useEffect.
+  // Production was already single-fire; strict mode only doubled every
+  // page's initial fetch in dev, making the DevTools network panel hard
+  // to read while debugging. Flip back to `true` if we want strict mode's
+  // safety checks (missing effect cleanup, stale closures, render-time
+  // side effects) and re-audit affected pages.
+  reactStrictMode: false,
 };
 
 export default nextConfig;

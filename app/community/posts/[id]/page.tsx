@@ -11,7 +11,7 @@ import {
   MailIcon,
   TrashIcon
 } from "@/components/icons";
-import { isAuthed } from "@/lib/auth";
+import { getMe, isAuthed } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 import {
   createCommunityComment,
@@ -77,13 +77,13 @@ export default function CommunityPostPage() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    // /me JWT read for "is this my post?" affordances. The Pegasus
-    // token shape isn't exposed here so we just match by user id once
-    // the post arrives — a tiny fetch to /me confirms.
+    // /me read for "is this my post?" affordances. Routes through the
+    // shared lib/auth cache — sidebar's useAuth has the same data, so
+    // this is usually a cache hit (no network).
     const grabMe = async () => {
       try {
-        const u = await import("@/lib/api-client").then((m) => m.api.get<{ id: string }>("/job-tracker/me"));
-        if (!cancelled) setMeId(u.id);
+        const u = await getMe();
+        if (!cancelled && u) setMeId(u.id);
       } catch {
         // Anon-equivalent — no author affordances render.
       }

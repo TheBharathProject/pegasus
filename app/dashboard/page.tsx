@@ -6,7 +6,7 @@ import { ProductFrame } from "@/components/frames";
 import { MetricCard } from "@/components/ui";
 import { ArrowRightIcon } from "@/components/icons";
 import { api, type ApiApplication, type ApiDashboard, type ApiUser } from "@/lib/api-client";
-import { isAuthed } from "@/lib/auth";
+import { getMe, isAuthed } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 
 function greetingFor(hour: number): string {
@@ -55,13 +55,16 @@ export default function DashboardPage() {
       goTo("/login");
       return;
     }
+    // /me routes through the shared cache in lib/auth so dashboard +
+    // sidebar + settings share one request. Analytics + applications are
+    // page-specific so they go direct.
     Promise.all([
-      api.get<ApiUser>("/job-tracker/me"),
+      getMe(),
       api.get<ApiDashboard>("/job-tracker/analytics/dashboard"),
       api.get<{ items: ApiApplication[] }>("/job-tracker/applications")
     ])
       .then(([u, m, page]) => {
-        setUser(u);
+        if (u) setUser(u as ApiUser);
         setMetrics(m);
         setApplications(page.items ?? []);
       })

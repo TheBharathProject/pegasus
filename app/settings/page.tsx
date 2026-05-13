@@ -15,7 +15,7 @@ import {
 import { ModalShell } from "@/components/ui";
 import { api, type ApiUser, type ApiProfile, type ApiAPIToken, type ApiBillingMe } from "@/lib/api-client";
 import { fetchBillingMe } from "@/lib/billing";
-import { isAuthed, clearToken } from "@/lib/auth";
+import { getMe, isAuthed, clearToken } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 import {
   getStoredTheme,
@@ -200,12 +200,14 @@ export default function SettingsPage() {
       goTo("/login");
       return;
     }
+    // /me routes through the shared cache (lib/auth) so settings doesn't
+    // re-fetch on every mount when the sidebar already has it.
     Promise.all([
-      api.get<ApiUser>("/job-tracker/me"),
+      getMe(),
       api.get<ApiProfile>("/job-tracker/profile")
     ])
       .then(([u, p]) => {
-        setUser(u);
+        if (u) setUser(u as ApiUser);
         setProfile(p);
       })
       .catch(() => {});
