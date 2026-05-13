@@ -391,14 +391,44 @@ export type ApiRecruiterPhone = {
   phone: string | null;
 };
 
+// company / role come from the ListReminders join (Activity panel).
+// They are absent on single-row endpoints (Get/Create/Patch) — that's why
+// they're optional, not required.
 export type ApiReminder = {
   id: string;
   applicationId: string;
+  company?: string;
+  role?: string;
   triggersAt: string;
   note?: string;
   firedAt?: string;
   createdAt: string;
   updatedAt: string;
+};
+
+// ApiAIReport mirrors the full row shape from GET /ai/resume/report/latest
+// and GET /ai/resume/reports/{id} (Activity panel drill-in).
+export type ApiAIReport = {
+  id: string;
+  resumeFileId?: string;
+  reportMd: string;
+  score: number;
+  createdAt: string;
+};
+
+// ApiAIReportSummary is the lightweight row shape for the list endpoint.
+// No markdown body — fetch the full report by id when the user drills in.
+export type ApiAIReportSummary = {
+  id: string;
+  resumeFileId?: string;
+  resumeFilename?: string;
+  score: number;
+  createdAt: string;
+};
+
+export type ApiAIReportsResponse = {
+  items: ApiAIReportSummary[];
+  nextCursor?: string | null;
 };
 
 export type ApiApplicationPage = {

@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ProductFrame } from "@/components/frames";
-import { ChevronLeft, ChevronRight, TrashIcon } from "@/components/icons";
+import {
+  ArrowUpRightIcon,
+  ChevronLeft,
+  ChevronRight,
+  MailIcon,
+  TrashIcon
+} from "@/components/icons";
 import { isAuthed } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 import {
@@ -205,34 +211,48 @@ export default function CommunityPostPage() {
         )
       }
     >
-      <article className="post-detail">
-        {post.body ? <p className="post-detail-body">{post.body}</p> : null}
+      {/* Recruiter surface gets a contact-card layout instead of the post-thread
+          framing. A recruiter in this directory isn't a "post" — the votes
+          read as "vouches" and the comments read as "reviews of this
+          recruiter." Same DB shape, different UI register. See ADR-0007. */}
+      {post.surface === "recruiters" ? (
+        <RecruiterDetailCard
+          post={post}
+          voting={voting}
+          onVote={() => handleVote(1)}
+        />
+      ) : (
+        <article className="post-detail">
+          {post.body ? <p className="post-detail-body">{post.body}</p> : null}
 
-        {/* Per-surface metadata pills. Best-effort rendering of common
-            keys; unknown shapes just show the raw stringified value. */}
-        <PostMetadata metadata={post.metadata} surface={post.surface} />
+          {/* Per-surface metadata pills. Best-effort rendering of common
+              keys; unknown shapes just show the raw stringified value. */}
+          <PostMetadata metadata={post.metadata} surface={post.surface} />
 
-        <div className="post-detail-actions">
-          <button
-            className={post.myVote === 1 ? "vote-button is-active" : "vote-button"}
-            type="button"
-            onClick={() => handleVote(1)}
-            disabled={voting}
-            aria-label="Upvote"
-          >
-            ↑ {post.voteCount}
-          </button>
-          <span className="muted small">
-            {post.commentCount} {post.commentCount === 1 ? "reply" : "replies"}
-          </span>
-        </div>
-      </article>
+          <div className="post-detail-actions">
+            <button
+              className={post.myVote === 1 ? "vote-button is-active" : "vote-button"}
+              type="button"
+              onClick={() => handleVote(1)}
+              disabled={voting}
+              aria-label="Upvote"
+            >
+              ↑ {post.voteCount}
+            </button>
+            <span className="muted small">
+              {post.commentCount} {post.commentCount === 1 ? "reply" : "replies"}
+            </span>
+          </div>
+        </article>
+      )}
 
       <section className="post-comments">
-        <h2>Replies</h2>
+        <h2>{post.surface === "recruiters" ? "Reviews" : "Replies"}</h2>
         {comments.length === 0 ? (
           <p className="muted small" style={{ marginTop: 14 }}>
-            No replies yet. Be the first.
+            {post.surface === "recruiters"
+              ? "No reviews yet. If you've worked with them, share what others should know."
+              : "No replies yet. Be the first."}
           </p>
         ) : (
           <ul className="comment-list">
@@ -263,7 +283,11 @@ export default function CommunityPostPage() {
 
         <form className="comment-composer" onSubmit={handlePostComment}>
           <textarea
-            placeholder="Write a reply…"
+            placeholder={
+              post.surface === "recruiters"
+                ? "Share what your experience working with this recruiter was like…"
+                : "Write a reply…"
+            }
             value={composerBody}
             onChange={(e) => setComposerBody(e.target.value)}
             disabled={posting}
@@ -276,16 +300,110 @@ export default function CommunityPostPage() {
               className="primary-button"
               disabled={posting || !composerBody.trim()}
             >
-              {posting ? "Posting…" : (
-                <>
-                  Reply <ChevronRight width={11} height={11} />
-                </>
-              )}
+              {posting
+                ? "Posting…"
+                : post.surface === "recruiters"
+                  ? <>Leave review <ChevronRight width={11} height={11} /></>
+                  : <>Reply <ChevronRight width={11} height={11} /></>}
             </button>
           </div>
         </form>
       </section>
     </ProductFrame>
+  );
+}
+
+// Recruiter detail card. The data model is identical to any other community
+// post (title, body, metadata jsonb, votes, comments) but the visual register
+// is a directory entry, not a discussion thread. Vote becomes "Vouch"; comment
+// count becomes "review count"; metadata keys (recruiter, company, title,
+// email, linkedinUrl, specializations, hiringLevels) get first-class slots.
+function RecruiterDetailCard({
+  post,
+  voting,
+  onVote
+}: {
+  post: ApiCommunityPost;
+  voting: boolean;
+  onVote: () => void;
+}) {
+  const m = (post.metadata || {}) as Record<string, unknown>;
+  const recruiterName = String(m.recruiter || post.title);
+  const company = m.company ? String(m.company) : "";
+  const title = m.title ? String(m.title) : "";
+  const email = m.email ? String(m.email) : "";
+  const linkedinUrl = m.linkedinUrl ? String(m.linkedinUrl) : "";
+  const specializations = Array.isArray(m.specializations) ? (m.specializations as string[]) : [];
+  const hiringLevels = Array.isArray(m.hiringLevels) ? (m.hiringLevels as string[]) : [];
+  const tagline = [title, company].filter(Boolean).join(" · ");
+
+  return (
+    <article className="recruiter-detail">
+      <header className="recruiter-detail-head">
+        <h2 className="recruiter-detail-name">{recruiterName}</h2>
+        {tagline ? <p className="recruiter-detail-tagline">{tagline}</p> : null}
+      </header>
+
+      {(email || linkedinUrl) && (
+        <div className="recruiter-detail-contact">
+          {email ? (
+            <a
+              className="recruiter-contact-link"
+              href={`mailto:${email}`}
+              aria-label={`Email ${recruiterName}`}
+            >
+              <MailIcon width={13} height={13} /> {email}
+            </a>
+          ) : null}
+          {linkedinUrl ? (
+            <a
+              className="recruiter-contact-link"
+              href={linkedinUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`LinkedIn profile for ${recruiterName}`}
+            >
+              LinkedIn <ArrowUpRightIcon width={11} height={11} />
+            </a>
+          ) : null}
+        </div>
+      )}
+
+      {(specializations.length > 0 || hiringLevels.length > 0) && (
+        <div className="recruiter-detail-tags">
+          {specializations.map((s) => (
+            <span key={`s-${s}`} className="recruiter-detail-tag">{s}</span>
+          ))}
+          {hiringLevels.map((s) => (
+            <span key={`l-${s}`} className="recruiter-detail-tag recruiter-detail-tag--level">{s}</span>
+          ))}
+        </div>
+      )}
+
+      {post.body ? (
+        <div className="recruiter-detail-notes">
+          <p className="recruiter-detail-notes-label">Notes from {post.authorName || "the contributor"}</p>
+          <p className="recruiter-detail-notes-body">{post.body}</p>
+        </div>
+      ) : null}
+
+      <div className="recruiter-detail-vouch">
+        <button
+          className={post.myVote === 1 ? "vote-button is-active" : "vote-button"}
+          type="button"
+          onClick={onVote}
+          disabled={voting}
+          aria-label={post.myVote === 1 ? "Remove your vouch" : "Vouch for this recruiter"}
+        >
+          ↑ Vouch
+        </button>
+        <span className="muted small">
+          {post.voteCount === 0
+            ? "Be the first to vouch"
+            : `${post.voteCount} ${post.voteCount === 1 ? "person vouches" : "people vouch"} for this recruiter`}
+        </span>
+      </div>
+    </article>
   );
 }
 

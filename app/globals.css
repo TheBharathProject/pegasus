@@ -312,6 +312,13 @@ code {
   display: grid;
   min-height: 100vh;
   background: var(--bg);
+  /* `align-content: normal` resolves to `stretch` for grid containers in
+     Chrome, which distributes leftover space (min-height: 100vh minus the
+     intrinsic row heights) into the row holding the mobile-topbar. The
+     visible effect on short pages: content drifts down from the topbar.
+     Forcing `start` pins rows to the top edge so the content begins
+     immediately under the topbar regardless of viewport height. */
+  align-content: start;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -5580,6 +5587,9 @@ html[data-sb="collapsed"] .signout-icon {
   margin-top: 14px;
   border: 1px solid var(--border);
   border-radius: 10px;
+  /* Desktop: clip so the border-radius isn't lost by the table.
+     Mobile: swap to horizontal scroll so all columns stay visible
+     instead of truncating off-screen — see media block below. */
   overflow: hidden;
 }
 
@@ -5619,6 +5629,29 @@ html[data-sb="collapsed"] .signout-icon {
 .recruiter-table .num {
   font-variant-numeric: tabular-nums;
   color: var(--text-soft);
+}
+
+@media (max-width: 640px) {
+  /* Tables stay tabular on mobile but swap to horizontal scroll so all
+     columns remain reachable instead of truncating past the viewport.
+     -webkit-overflow-scrolling: touch keeps momentum scroll on iOS. */
+  .recruiter-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .recruiter-table table {
+    min-width: max-content;
+  }
+  .recruiter-table th,
+  .recruiter-table td {
+    padding: 11px 14px;
+    white-space: nowrap;
+  }
+  /* Notes column can wrap — it's a long tail, not an identifier. */
+  .recruiter-table td:nth-last-child(2) {
+    white-space: normal;
+    min-width: 180px;
+  }
 }
 
 /* Page-level header note for community sections */
@@ -10964,4 +10997,415 @@ html[data-sb="expanded"] .product-frame {
 @keyframes page-toast-in {
   from { transform: translate(-50%, 8px); opacity: 0; }
   to   { transform: translate(-50%, 0);   opacity: 1; }
+}
+
+/* =====================================================================
+   COMMUNITY · RECRUITER DETAIL  (route: /community/posts/{slug})
+   Same DB row as any other community post; intentionally distinct visual
+   register so a recruiter contact doesn't read like a discussion thread.
+   See ADR-0007 (surface-aware detail page).
+   ===================================================================== */
+
+.recruiter-detail {
+  margin-top: 4px;
+  margin-bottom: 22px;
+  padding: 24px 26px 22px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-soft);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle vertical rule reminiscent of a business-card edge. */
+.recruiter-detail::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  bottom: 18px;
+  left: 0;
+  width: 2px;
+  background: var(--border-strong);
+  border-radius: 0 2px 2px 0;
+}
+
+.recruiter-detail-head {
+  margin-bottom: 12px;
+}
+
+.recruiter-detail-name {
+  font-family: var(--font-serif-stack);
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.15;
+}
+
+.recruiter-detail-tagline {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  font-size: 14px;
+  letter-spacing: 0.005em;
+}
+
+.recruiter-detail-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 14px;
+}
+
+.recruiter-contact-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 12.5px;
+  text-decoration: none;
+  background: var(--bg);
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+@media (hover: hover) {
+  .recruiter-contact-link:hover {
+    background: var(--surface-2);
+    border-color: var(--rule-mid);
+  }
+}
+
+.recruiter-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 4px;
+}
+
+.recruiter-detail-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  color: var(--text-soft);
+  background: var(--chip);
+  border: 1px solid transparent;
+}
+
+.recruiter-detail-tag--level {
+  /* Hiring levels get a subtle outline so they're distinguishable from
+     specializations at a glance without inventing a new color token. */
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.recruiter-detail-notes {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.recruiter-detail-notes-label {
+  margin: 0 0 6px;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.recruiter-detail-notes-body {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.recruiter-detail-vouch {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 640px) {
+  .recruiter-detail {
+    padding: 20px 18px;
+  }
+  .recruiter-detail-vouch {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+/* =====================================================================
+   ACTIVITY CENTER  (route: /notifications, page header: "Activity")
+   See docs/adr/0007-activity-history-center.md for the design rationale.
+   ===================================================================== */
+
+/* Tabs nav sits between intro and content. .community-tabs already gives us
+   the chip row layout; .activity-tabs only adjusts the surrounding rhythm. */
+.activity-tabs {
+  margin-top: 14px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+}
+
+/* Per-pane toolbar — left-aligned filter chip group plus a refresh icon
+   pinned to the right. Each pane defines its own filter axis (ADR D7). */
+.activity-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.activity-toolbar-label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-right: 4px;
+  align-self: center;
+}
+
+/* Generic table for activity panes. Visually identical to .recruiter-table
+   on desktop, collapses to card rows on mobile using data-label attributes
+   (same trick as .app-table). One class drives both new tables (reports +
+   reminders) so the responsive logic lives in one place. */
+.activity-table {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.activity-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.activity-table th,
+.activity-table td {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 13px;
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.activity-table th {
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: var(--bg-soft);
+}
+
+.activity-table tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (hover: hover) {
+  .activity-table tbody tr:hover {
+    background: var(--bg-soft);
+  }
+}
+
+.activity-table .num {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-soft);
+  text-align: right;
+}
+
+.link-like {
+  color: var(--text-soft);
+  font-size: 12.5px;
+}
+
+@media (hover: hover) {
+  .activity-table tbody tr:hover .link-like {
+    color: var(--text);
+  }
+}
+
+/* Score chip — a numeric pill that earns its visual weight on the row.
+   Tone scales from muted (low score) to warm cream (high score) so the
+   eye reads the gradient without us reaching for traffic-light colors. */
+.score-chip {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 44px;
+  justify-content: center;
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  background: var(--bg-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.score-chip--strong {
+  color: var(--text);
+  background: rgba(217, 247, 224, 0.16);
+  border-color: rgba(217, 247, 224, 0.45);
+}
+.score-chip--ok {
+  color: var(--text);
+  background: rgba(239, 231, 210, 0.14);
+  border-color: rgba(239, 231, 210, 0.4);
+}
+.score-chip--weak {
+  color: var(--text-soft);
+  background: var(--bg-soft);
+  border-color: var(--border);
+}
+
+[data-theme="light"] .score-chip--strong {
+  background: #e7f3ea;
+  border-color: #b7d5bd;
+}
+[data-theme="light"] .score-chip--ok {
+  background: #f6efde;
+  border-color: #d8c9a3;
+}
+[data-theme="light"] .score-chip--weak {
+  background: #efeae0;
+  border-color: #d8d2c5;
+  color: var(--text-soft);
+}
+
+/* Reminder status — Pending = warm/active, Fired = muted. Avoids the
+   greens-and-reds vocabulary that the rest of the app doesn't speak. */
+.reminder-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.reminder-status.pending {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+.reminder-status.fired {
+  color: var(--text-faint);
+  border-style: dashed;
+}
+
+/* Drill-in modal — score + date header above the markdown body. */
+.activity-report-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Mobile: activity-table collapses to a vertically-stacked card list.
+   data-label attribute on each <td> drives the inline key prefix. The
+   first cell (date for reports, when for reminders) becomes the headline.
+   Same trick the applications table uses — see ~line 8637. */
+@media (max-width: 640px) {
+  .activity-table {
+    overflow: visible;
+    border: 0;
+  }
+  .activity-table table,
+  .activity-table thead,
+  .activity-table tbody,
+  .activity-table tr,
+  .activity-table th,
+  .activity-table td {
+    display: block;
+    min-width: 0;
+  }
+  .activity-table thead {
+    display: none;
+  }
+  .activity-table tbody {
+    display: grid;
+    gap: 10px;
+  }
+  .activity-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+  }
+  @media (hover: hover) {
+    .activity-table tr:hover {
+      background: var(--bg-soft);
+    }
+  }
+  .activity-table td {
+    padding: 0;
+    border: 0;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .activity-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--text-faint);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  /* First-column cells (Date / When) become the row headline:
+     span both columns, no label prefix, slightly heavier weight. */
+  .activity-table td[data-label="Date"],
+  .activity-table td[data-label="When"] {
+    grid-column: 1 / span 2;
+    font-family: var(--font-serif-stack);
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+  .activity-table td[data-label="Date"]::before,
+  .activity-table td[data-label="When"]::before {
+    content: none;
+  }
+  /* Action cell on mobile — right-aligned next to status. */
+  .activity-table td[data-label=""] {
+    grid-column: 2;
+    align-self: center;
+  }
+  .activity-table td[data-label=""]::before {
+    content: none;
+  }
+  .activity-toolbar {
+    /* Stack filter pills and refresh on narrow widths so neither wraps oddly. */
+    align-items: flex-start;
+  }
 }

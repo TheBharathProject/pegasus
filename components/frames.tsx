@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ReactNode, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import {
   LogOutIcon,
   BellIcon,
@@ -237,6 +238,36 @@ export function ProductFrame({
   // them client-side; the hook already declines to poll).
   const unreadCount = useUnreadCount();
 
+  // Disambiguate "which sidebar link is active" when multiple links share the
+  // same `key` (the five Community sub-sections all use key="community"). The
+  // old logic — `active === link.key && (!currentPath || currentPath ===
+  // link.href)` — fell through to "all five active" whenever a caller passed
+  // `active="community"` without a `currentPath` (e.g. the post-detail page's
+  // loading / not-found states). Now we compute a single winning href:
+  //   1. explicit `currentPath` prop wins if it matches a same-key link;
+  //   2. otherwise the live URL pathname picks the link whose href it
+  //      starts with (so /community/posts/... on the detail page still picks
+  //      a sane fallback when possible — but only one link, never all five);
+  //   3. otherwise the first link with the matching key wins (preserves
+  //      behaviour for unique-key links like Dashboard).
+  const pathname = usePathname() ?? "";
+  const activeHref = useMemo(() => {
+    const sameKey = productNavGroups
+      .flatMap((g) => g.links)
+      .filter((l) => l.key === active);
+    if (sameKey.length === 0) return null;
+    if (sameKey.length === 1) return sameKey[0].href;
+    if (currentPath) {
+      const explicit = sameKey.find((l) => l.href === currentPath);
+      if (explicit) return explicit.href;
+    }
+    const byPath = sameKey.find(
+      (l) => pathname === l.href || pathname.startsWith(l.href + "/")
+    );
+    if (byPath) return byPath.href;
+    return null;
+  }, [active, currentPath, pathname]);
+
   useEffect(() => {
     if (!drawerOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -323,9 +354,7 @@ export function ProductFrame({
                 return (
                   <Link
                     className={
-                      active === link.key && (!currentPath || currentPath === link.href)
-                        ? "sidebar-link active"
-                        : "sidebar-link"
+                      link.href === activeHref ? "sidebar-link active" : "sidebar-link"
                     }
                     href={link.href}
                     key={link.href}

@@ -7,6 +7,7 @@ import { ProductFrame } from "@/components/frames";
 import { MetricCard, ModalShell, Pill } from "@/components/ui";
 import { ApplicationTimeline } from "@/components/timeline";
 import { ImportModal } from "@/components/import-modal";
+import { ReminderModal } from "@/components/reminder-modal";
 import {
   api,
   apiBaseUrl,
@@ -181,12 +182,9 @@ function ApplicationsInner() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [coverLetterText, setCoverLetterText] = useState<string | null>(null);
 
-  // Reminders
+  // Reminders — modal lives in components/reminder-modal.tsx (ADR-0007 D6).
+  // We only track which application opened it; the modal owns its own form state.
   const [reminderApp, setReminderApp] = useState<ApiApplication | null>(null);
-  const [reminderAt, setReminderAt] = useState("");
-  const [reminderNote, setReminderNote] = useState("");
-  const [reminderBusy, setReminderBusy] = useState(false);
-  const [reminderError, setReminderError] = useState<string | null>(null);
 
   const viewingApp = useMemo(
     () => items.find((a) => a.id === viewingId) ?? null,
@@ -671,9 +669,6 @@ function ApplicationsInner() {
                         onClick={(e) => {
                           e.stopPropagation();
                           setReminderApp(application);
-                          setReminderAt("");
-                          setReminderNote("");
-                          setReminderError(null);
                         }}
                       >
                         <BellIcon width={14} height={14} />
@@ -1396,100 +1391,15 @@ function ApplicationsInner() {
         ) : null}
       </ModalShell>
 
-      <ModalShell
-        open={!!reminderApp}
-        onClose={() => setReminderApp(null)}
-        title={reminderApp ? `Set reminder · ${reminderApp.company}` : "Set reminder"}
-        titleId="reminder-modal-title"
-      >
-        {reminderApp ? (
-          <>
-            <div className="form-grid">
-              <div className="field" style={{ gridColumn: "1 / -1" }}>
-                <label>Quick pick</label>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {[
-                    { label: "Tomorrow", days: 1 },
-                    { label: "In 3 days", days: 3 },
-                    { label: "In 1 week", days: 7 },
-                    { label: "In 2 weeks", days: 14 }
-                  ].map(({ label, days }) => {
-                    const ts = new Date(Date.now() + days * 86_400_000);
-                    ts.setHours(9, 0, 0, 0);
-                    const iso = ts.toISOString().slice(0, 16);
-                    return (
-                      <button
-                        key={label}
-                        type="button"
-                        className={reminderAt === iso ? "primary-button" : "ghost-button"}
-                        style={{ fontSize: 13 }}
-                        onClick={() => setReminderAt(iso)}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="field" style={{ gridColumn: "1 / -1" }}>
-                <label>Custom date &amp; time</label>
-                <input
-                  type="datetime-local"
-                  value={reminderAt}
-                  onChange={(e) => setReminderAt(e.target.value)}
-                />
-              </div>
-              <div className="field" style={{ gridColumn: "1 / -1" }}>
-                <label>Note (optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Follow up on interview feedback"
-                  value={reminderNote}
-                  onChange={(e) => setReminderNote(e.target.value)}
-                />
-              </div>
-              {reminderError ? (
-                <p className="muted small" style={{ color: "var(--danger)", gridColumn: "1 / -1" }}>
-                  {reminderError}
-                </p>
-              ) : null}
-            </div>
-            <div className="ai-modal-foot">
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => setReminderApp(null)}
-              >
-                Cancel
-              </button>
-              <button
-                className="primary-button"
-                type="button"
-                disabled={!reminderAt || reminderBusy}
-                onClick={async () => {
-                  if (!reminderApp || !reminderAt) return;
-                  setReminderBusy(true);
-                  setReminderError(null);
-                  try {
-                    const ts = new Date(reminderAt).toISOString();
-                    await api.post(
-                      `/job-tracker/applications/${reminderApp.id}/reminders`,
-                      { triggersAt: ts, note: reminderNote || undefined }
-                    );
-                    setReminderApp(null);
-                  } catch (e) {
-                    setReminderError((e as Error).message);
-                  } finally {
-                    setReminderBusy(false);
-                  }
-                }}
-              >
-                {reminderBusy ? "Saving…" : "Set reminder"}
-              </button>
-            </div>
-          </>
-        ) : null}
-      </ModalShell>
+      {reminderApp ? (
+        <ReminderModal
+          open
+          mode="create"
+          applicationId={reminderApp.id}
+          applicationLabel={reminderApp.company}
+          onClose={() => setReminderApp(null)}
+        />
+      ) : null}
 
       <ImportModal
         open={importOpen}

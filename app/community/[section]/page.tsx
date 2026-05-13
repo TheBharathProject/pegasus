@@ -16,7 +16,7 @@ import {
   UploadIcon,
   UserPlusIcon
 } from "@/components/icons";
-import { askTags, communityExperiences } from "@/lib/site-data";
+import { askTags } from "@/lib/site-data";
 import {
   buildAskPayload,
   buildExperiencePayload,
@@ -49,10 +49,15 @@ type FilterSelectDef = {
   options: Array<{ label: string; value: string }>;
 };
 
+// Sentence-style intro tag per surface. Takes the live count from the API and
+// returns a clean phrase that always renders the number (including 0) and
+// handles singular vs plural without leaving "1 reviews" awkwardness behind.
+type CountLabel = (n: number) => string;
+
 const sectionMeta: Record<SectionKey, {
   title: string;
   intro: string;
-  countNoun: string;
+  countLabel: CountLabel;
   primaryLabel: string;
   filterSelects: FilterSelectDef[];
   searchPlaceholder?: string;
@@ -63,7 +68,7 @@ const sectionMeta: Record<SectionKey, {
   reviews: {
     title: "Resume Reviews",
     intro: "Upload a resume for critique and filter the feed by role and seniority.",
-    countNoun: "reviews",
+    countLabel: (n) => `${n} resume ${n === 1 ? "review" : "reviews"} from the community`,
     primaryLabel: "Post your resume",
     filterSelects: [
       { key: "sort", options: [
@@ -88,7 +93,7 @@ const sectionMeta: Record<SectionKey, {
   experiences: {
     title: "Interview Experiences",
     intro: "Real hiring loops with outcomes, round counts, location context, and community voting.",
-    countNoun: "experiences shared by the community",
+    countLabel: (n) => `${n} interview ${n === 1 ? "experience" : "experiences"} shared by the community`,
     primaryLabel: "Share",
     filterSelects: [
       { key: "sort", options: [
@@ -108,7 +113,7 @@ const sectionMeta: Record<SectionKey, {
   referrals: {
     title: "Referrals",
     intro: "A dedicated route for referral requests and profile checks.",
-    countNoun: "open referrals",
+    countLabel: (n) => `${n} open ${n === 1 ? "referral" : "referrals"} from the community`,
     primaryLabel: "Offer Referral",
     filterSelects: [
       { key: "sort", options: [
@@ -126,7 +131,7 @@ const sectionMeta: Record<SectionKey, {
   ask: {
     title: "Ask",
     intro: "Career questions with tags for salary, negotiation, interview prep, and work-life decisions.",
-    countNoun: "questions",
+    countLabel: (n) => `${n} ${n === 1 ? "question" : "questions"} from the community`,
     primaryLabel: "Ask",
     filterSelects: [
       { key: "sort", options: [
@@ -148,7 +153,7 @@ const sectionMeta: Record<SectionKey, {
   recruiters: {
     title: "Recruiter Directory",
     intro: "A community directory for recruiter names, companies, and shared context.",
-    countNoun: "recruiters contributed by the community",
+    countLabel: (n) => `${n} ${n === 1 ? "recruiter" : "recruiters"} contributed by the community`,
     primaryLabel: "Add Recruiter",
     filterSelects: [
       { key: "sort", options: [
@@ -440,19 +445,11 @@ export default function CommunitySectionPage() {
     notFound();
   }
 
-  const count =
-    section === "experiences"
-      ? communityExperiences.length
-      : section === "recruiters"
-        ? posts.length
-        : 0;
-
-  const filteredExperiences = communityExperiences.filter(
-    (e) =>
-      !search.trim() ||
-      e.company.toLowerCase().includes(search.toLowerCase()) ||
-      e.role.toLowerCase().includes(search.toLowerCase())
-  );
+  // Live count for every surface — the page intro renders this through
+  // meta.countLabel(count) which handles 0/singular/plural. Previously only
+  // experiences + recruiters were wired up; reviews/referrals/ask fell
+  // through to 0 and hid the actual community size.
+  const count = posts.length;
 
   const closeModal = () => setOpenModal(false);
 
@@ -497,7 +494,7 @@ export default function CommunitySectionPage() {
     <ProductFrame
       active="community"
       title={meta.title}
-      intro={`${count > 0 ? count + " " : ""}${meta.countNoun}`}
+      intro={meta.countLabel(count)}
       currentPath={`/community/${section}`}
       actions={
         <button type="button" className="primary-button" onClick={() => setOpenModal(true)}>
