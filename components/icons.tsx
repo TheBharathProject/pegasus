@@ -70,6 +70,19 @@ export function FileIcon(props: Props) {
   );
 }
 
+// ResumeBuilderIcon — document with a pencil overlay. Reads as "edit/build
+// the document" rather than the bare FileIcon used by Resume AI.
+export function ResumeBuilderIcon(props: Props) {
+  return (
+    <Svg {...props}>
+      <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7" />
+      <path d="M14 3v6h6V9" />
+      <path d="M8 13h5" />
+      <path d="M17.5 14.5l3 3-4.5 4.5h-3v-3z" />
+    </Svg>
+  );
+}
+
 export function FolderIcon(props: Props) {
   return (
     <Svg {...props}>

@@ -18,6 +18,7 @@ import {
   HelpIcon,
   MenuIcon,
   NotebookIcon,
+  ResumeBuilderIcon,
   SettingsIcon,
   UserPlusIcon
 } from "./icons";
@@ -37,6 +38,7 @@ type ProductNavKey =
   | "notes"
   | "profile"
   | "resume"
+  | "resume_builder"
   | "resumes"
   | "notifications"
   | "settings"
@@ -80,6 +82,7 @@ const productNavGroups: Array<{ label?: string; links: NavLink[] }> = [
     label: "You",
     links: [
       { href: "/resume", label: "Resume AI", key: "resume", Icon: FileIcon },
+      { href: "/resume-builder", label: "Resume Builder", key: "resume_builder", Icon: ResumeBuilderIcon },
       { href: "/resumes", label: "Vault", key: "resumes", Icon: FolderIcon },
       { href: "/recruiters", label: "Recruiters", key: "recruiters", Icon: ContactIcon },
       { href: "/notifications", label: "Notifications", key: "notifications", Icon: BellIcon },

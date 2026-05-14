@@ -109,7 +109,15 @@ export function NotificationsPane({
       }
     }
     if (n.linkPath) {
-      router.push(n.linkPath);
+      // Next.js basePath ("/pegasus") is prepended automatically by
+      // router.push(). Backend stores basePath-relative paths today,
+      // but historical rows have the `/pegasus` prefix baked in —
+      // strip it defensively so those still navigate correctly
+      // instead of double-prefixing to `/pegasus/pegasus/…`.
+      const path = n.linkPath.startsWith("/pegasus/")
+        ? n.linkPath.slice("/pegasus".length)
+        : n.linkPath;
+      router.push(path);
     }
   };
 

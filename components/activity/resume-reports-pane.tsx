@@ -216,11 +216,21 @@ export function ResumeReportsPane() {
               </span>
               <span className="muted small">{fmtDate(openReport.createdAt)}</span>
             </div>
-            <div
-              className="markdown-body"
-              style={{ marginTop: 14 }}
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(openReport.reportMd) }}
-            />
+            {openReport.format === "md" && openReport.reportMd ? (
+              <div
+                className="markdown-body"
+                style={{ marginTop: 14 }}
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(openReport.reportMd) }}
+              />
+            ) : (
+              <p className="muted small" style={{ marginTop: 14 }}>
+                This report uses the new structured score format. Open it on
+                the Resume AI page for the full breakdown:{" "}
+                <a href={`/pegasus/resume?id=${openReport.id}`}>
+                  /pegasus/resume?id={openReport.id}
+                </a>
+              </p>
+            )}
           </>
         ) : null}
       </ModalShell>

@@ -11409,3 +11409,1910 @@ html[data-sb="expanded"] .product-frame {
     align-items: flex-start;
   }
 }
+
+/* =====================================================================
+   RESUME BUILDER  (route: /resume-builder)
+   Two-pane editor: form on the left, live preview on the right. The
+   preview is a deliberate HTML approximation of the LaTeX classic-v1
+   template — not pixel-perfect, but close enough for editor feedback.
+   The real PDF compile happens in the export modal via Tectonic.
+   ===================================================================== */
+
+/* Top-level shell — drafts rail + main editor area. */
+.rb-shell {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 16px;
+}
+
+.rb-rail {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  overflow: hidden;
+  align-self: start;
+  position: sticky;
+  top: 18px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+.rb-rail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 10px;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.rb-rail-head-label {
+  flex: 1;
+}
+
+/* Count chip beside "Drafts" — tiny serif numeral to make the rail
+   feel less administrative and more like a counted index. */
+.rb-rail-count {
+  font-family: var(--font-serif-stack);
+  font-size: 13px;
+  letter-spacing: 0;
+  font-style: italic;
+  color: var(--text-soft);
+  text-transform: none;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  line-height: 1.4;
+}
+
+/* Full-width New draft CTA at the top of the rail. Replaces the old
+   tiny "+" icon in the header so the action reads as the first thing
+   the user can do, not a corner ornament. */
+.rb-rail-new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: calc(100% - 20px);
+  margin: 0 10px 10px;
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
+}
+
+.rb-rail-new:hover:not(:disabled) {
+  border-color: var(--stage-interest);
+  color: var(--stage-interest);
+  background: rgba(214, 188, 142, 0.06);
+}
+
+.rb-rail-new:focus-visible {
+  outline: none;
+  border-color: var(--stage-interest);
+  box-shadow: 0 0 0 2px rgba(214, 188, 142, 0.25);
+}
+
+.rb-rail-new:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.rb-draft-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+
+.rb-draft-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 140ms ease;
+  position: relative;
+}
+
+.rb-draft-item:last-child {
+  border-bottom: 0;
+}
+
+@media (hover: hover) {
+  .rb-draft-item:hover {
+    background: var(--bg);
+  }
+}
+
+.rb-draft-item.is-active {
+  background: var(--bg);
+  padding-left: 16px;
+}
+
+/* Warm-cream side rail on the active draft — same tone we use for
+   stage accents elsewhere. Reads brighter than the previous flat
+   2px border, ties the rail back to the Pegasus accent palette. */
+.rb-draft-item.is-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: var(--stage-interest);
+  border-radius: 0 2px 2px 0;
+}
+
+.rb-draft-item.is-active .rb-draft-title {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.rb-draft-title {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-soft);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 140ms ease;
+}
+
+.rb-draft-sub {
+  margin: 2px 0 0;
+  font-size: 11px;
+}
+
+.rb-main {
+  min-width: 0;
+}
+
+/* Editor — split-pane form + preview. */
+.rb-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.rb-editor-form {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.rb-editor-preview {
+  min-width: 0;
+  position: sticky;
+  top: 18px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-soft);
+  padding: 16px;
+}
+
+/* Editor — title bar.
+   Borderless display-font line; only the focus state reveals the
+   underline rule. The input acts as the document's identity (not a
+   form field), so it gets the serif treatment, larger size, and
+   warm-cream caret. */
+.rb-title-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid transparent;
+  transition: border-color 160ms ease;
+}
+.rb-title-row:focus-within {
+  border-bottom-color: var(--text-faint);
+}
+
+.rb-title-input {
+  background: transparent;
+  border: 0;
+  outline: none;
+  padding: 6px 0 8px;
+  font-family: var(--font-serif-stack);
+  font-size: 26px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  caret-color: var(--stage-interest);
+  width: 100%;
+}
+.rb-title-input::placeholder {
+  color: var(--text-faint);
+  font-style: italic;
+}
+.rb-title-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Editor — mode toggle (segmented control with sliding pill).
+   data-mode on the wrapper drives the pill's position via transform.
+   The buttons themselves are transparent; the pill underneath gives
+   the active state. Smooth motion at 220ms ease. */
+.rb-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rb-mode-toggle {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-soft);
+}
+.rb-mode-toggle-pill {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  height: calc(100% - 6px);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  transition: transform 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  pointer-events: none;
+}
+.rb-mode-toggle[data-mode="tex"] .rb-mode-toggle-pill {
+  transform: translateX(100%);
+}
+.rb-mode-toggle-btn {
+  position: relative;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  font-family: inherit;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 160ms ease;
+  white-space: nowrap;
+  text-align: center;
+}
+.rb-mode-toggle-btn[aria-selected="true"] {
+  color: var(--text);
+}
+.rb-mode-toggle-btn:focus-visible {
+  outline: 1px dashed var(--text-faint);
+  outline-offset: 2px;
+}
+.rb-mode-hint {
+  flex: 1;
+  min-width: 200px;
+  line-height: 1.45;
+}
+
+/* Info banner — calm outlined banner with a left rule. Used for
+   non-error states like "you have hand-edited LaTeX from a previous
+   session". Distinct from .notice (error-toned). */
+.rb-info-banner {
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 0;
+  background: rgba(239, 231, 210, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  align-items: flex-start;
+}
+.rb-info-banner-rule {
+  width: 2px;
+  align-self: stretch;
+  background: var(--stage-interest);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.rb-info-banner-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.rb-info-banner p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-soft);
+  line-height: 1.5;
+  flex: 1;
+}
+.rb-info-banner-action {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+.rb-info-banner-action:hover {
+  color: var(--text);
+  border-color: var(--stage-interest);
+}
+
+/* Save status chip — replaces the muted-text save badge. A small
+   round chip with a status indicator + label. Three states:
+   - is-saving:  pulsing dot
+   - is-saved:   green check
+   - is-error:   red exclamation */
+.rb-save-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text-soft);
+  white-space: nowrap;
+  user-select: none;
+}
+.rb-save-chip.is-saving {
+  color: var(--text-soft);
+}
+.rb-save-chip.is-saved {
+  color: #8bcf90;
+  border-color: rgba(139, 207, 144, 0.28);
+  background: rgba(139, 207, 144, 0.08);
+}
+.rb-save-chip.is-error {
+  color: #d99088;
+  border-color: rgba(217, 144, 136, 0.34);
+  background: rgba(217, 144, 136, 0.08);
+}
+.rb-save-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  animation: rb-save-pulse 1.2s ease-in-out infinite;
+}
+@keyframes rb-save-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50%      { opacity: 1;    transform: scale(1.1); }
+}
+.rb-save-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.rb-tex-area {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.45;
+  white-space: pre;
+  /* The textarea defaults to wrapping; for LaTeX we want long lines to
+     stay long so structure stays readable. */
+  overflow-x: auto;
+}
+
+/* Small toggle row above the form-mode preview lets the user swap
+   between fast HTML approximation and the real (slower) compiled PDF. */
+.rb-preview-mode-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+/* LaTeX compile preview — swaps in for the HTML preview when the editor
+   is in LaTeX mode. The HTML preview can't render arbitrary .tex, so we
+   show a real compiled PDF (on user click) instead. */
+.rb-tex-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.rb-tex-preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rb-tex-preview-blank {
+  flex: 1;
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.rb-tex-preview-iframe {
+  display: block;
+  width: 100%;
+  height: 600px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+/* Compile-failed display — monospace, fixed max height, scrollable so a
+   massive Tectonic log can't push the editor layout around. */
+.rb-tex-preview-error {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.rb-tex-preview-log {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-soft);
+  max-height: 380px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg-soft);
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+/* Per-section form blocks. The section card is the primary unit of the
+   form column — slightly elevated bg, generous padding, subtle hover
+   border lift. Nested array-items sit inside with the inverse
+   tint to keep hierarchy legible. */
+.rb-section {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px 20px;
+  background: var(--bg);
+  transition: border-color 140ms ease;
+}
+
+.rb-section:hover {
+  border-color: var(--border-strong);
+}
+
+.rb-section:focus-within {
+  border-color: var(--border-strong);
+}
+
+.rb-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.rb-section-head h3 {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+}
+
+/* Monospace small-caps numeral paired with each section heading.
+   Sits to the left of the H3 like an editorial chapter mark. */
+.rb-section-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-soft);
+  line-height: 1.4;
+}
+
+/* Pushes the trailing action (Add / Reset / counter) to the right
+   without forcing the H3 to space-between the whole row. */
+.rb-section-head-action {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  padding: 5px 9px;
+}
+
+.rb-section-head-meta {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+/* Inline dashed-border CTA used when a repeating section is empty.
+   Replaces the muted help-paragraph fallback. */
+.rb-empty-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: transparent;
+  font-family: var(--font-serif-stack);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.rb-empty-cta:hover {
+  color: var(--text);
+  border-color: var(--stage-interest);
+  background: rgba(214, 188, 142, 0.06);
+}
+
+.rb-empty-cta:focus-visible {
+  outline: none;
+  border-color: var(--stage-interest);
+  box-shadow: 0 0 0 2px rgba(214, 188, 142, 0.25);
+}
+
+/* For sections like Skills/Projects where the empty state has a
+   help-paragraph in addition to the CTA (more context to give). */
+.rb-empty-cta-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Repeating-row arrays (experiences, educations, skills, projects).
+   The outer .rb-section is the elevated card (border on body bg);
+   inner array-items are nested cards — slightly recessed background
+   to read as "inside the section" rather than competing with it. */
+.rb-array {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rb-array-item {
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--bg-soft);
+  transition: border-left-color 140ms ease;
+}
+
+.rb-array-item:hover {
+  border-left-color: var(--stage-interest);
+}
+
+.rb-array-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 9px;
+  border-bottom: 1px dashed var(--border);
+}
+
+/* Warmer focus ring for inputs inside resume-builder section cards.
+   Picks up the same warm-cream accent used elsewhere in Pegasus so
+   focused fields read as "live editing this resume". */
+.rb-section .field input:focus,
+.rb-section .field select:focus,
+.rb-section .field textarea:focus,
+.rb-array-item .field input:focus,
+.rb-array-item .field select:focus,
+.rb-array-item .field textarea:focus {
+  border-color: var(--stage-interest);
+  box-shadow: 0 0 0 2px rgba(214, 188, 142, 0.18);
+}
+
+.rb-section .field label,
+.rb-array-item .field label {
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.rb-array-item-title {
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rb-array-item-actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* Preview pagination — page-shaped cards stacked vertically.
+   .rb-preview-wrap is the outer container that lives inside .rb-editor-preview.
+   .rb-preview-measure is a hidden full-width clone the layout effect reads
+   for height (so we can compute page count).
+   .rb-page is one scaled-to-fit page card; inside, .rb-page-scale wraps the
+   full base-size content and applies a CSS transform: scale(N) so the page
+   renders at the pane's actual width. .rb-page-slice translates the
+   duplicated content tree by -i*PAGE_HEIGHT so each card shows its slice. */
+.rb-preview-wrap {
+  position: relative;
+}
+
+.rb-preview-measure {
+  position: absolute;
+  left: -99999px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.rb-preview-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.rb-page {
+  position: relative;
+  overflow: hidden;
+  background: #fdfdfb;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+.rb-page-scale {
+  /* Anchored to the page card's top-left; the inline transform-origin
+     ensures the scale shrinks toward the corner so the visible box stays
+     pixel-aligned with the parent. */
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.rb-page-slice {
+  /* Holds the FULL rendered content; translateY in the inline style
+     uncovers only the slice for this page. overflow:hidden on .rb-page
+     clips everything outside the visible page area. */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.rb-page-number {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.34);
+  pointer-events: none;
+}
+
+/* The paper itself — typography + padding inside each page. Lives inside
+   .rb-page-slice so it gets clipped to the page card boundary.
+   --rb-accent, --rb-font-stack, --rb-divider-style, --rb-header-align are
+   set inline by preview.tsx based on content.style. Defaults are baked
+   in via fallback chain so the look stays sane if a draft predates
+   the style field. */
+.rb-preview-paper {
+  --rb-accent: #1a1a1a;
+  /* "Latin Modern Roman" is what Tectonic ships — the canonical LaTeX
+     serif. We can't ship its full webfont without bloat, but "CMU Serif"
+     web fork + "Latin Modern Roman" fallback cover users who have it
+     installed (TeX users often do). Charter is the next-closest system
+     serif in shape; Georgia is a wider-glyph fallback. */
+  --rb-font-stack: "Latin Modern Roman", "CMU Serif", "Charter", "Iowan Old Style", "Georgia", serif;
+  --rb-divider-style: solid;
+  --rb-header-align: center;
+
+  font-family: var(--rb-font-stack);
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: #1a1a1a;
+  background: #fdfdfb;
+  /* Only horizontal margins live on the paper — vertical margins are
+     applied per-page card (PAGE_MARGIN_TOP/BOTTOM in preview.tsx) so
+     each rendered page has its own safe zone. The 67px value mirrors
+     the LaTeX template's \usepackage[margin=0.7in]{geometry} — 0.7in
+     × 96dpi ≈ 67.2px — for visual parity with the compiled output. */
+  padding: 0 67px;
+  width: 816px; /* matches PAGE_BASE_WIDTH in preview.tsx */
+}
+
+/* Content slice — the tall content tree, clipped by .rb-page-content-area
+   to a single page worth of content. */
+.rb-page-content-area {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Typography sized to render at the page's base width (816px = 8.5in@96dpi)
+   and then CSS-scaled down by the page card. Sizes here are "real Letter"
+   sizes (10–24pt), not pane-fitted-pixel sizes. */
+.rb-preview-head {
+  /* Honours --rb-header-align ("center" default, "left" when toggled). */
+  text-align: var(--rb-header-align);
+  margin-bottom: 18px;
+}
+
+.rb-preview-head h1 {
+  font-family: "Charter", "Iowan Old Style", "Georgia", serif;
+  font-weight: 700;
+  font-size: 30px;
+  margin: 0;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.rb-preview-headline {
+  margin: 4px 0 0;
+  font-size: 16px;
+  color: #444;
+}
+
+.rb-preview-contact {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #555;
+}
+
+.rb-preview-contact a {
+  color: var(--rb-accent);
+  text-decoration: underline;
+}
+
+.rb-preview-dot {
+  margin: 0 4px;
+  color: #888;
+}
+
+.rb-preview-section {
+  margin-top: 18px;
+}
+
+.rb-preview-section h2 {
+  font-family: var(--rb-font-stack);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  margin: 0 0 6px;
+  padding-bottom: 3px;
+  /* Border collapses when --rb-divider-style is "none" (border-style:none
+     suppresses the line regardless of width). Accent colour drives the
+     rule when present. */
+  border-bottom-width: 1.5px;
+  border-bottom-style: var(--rb-divider-style);
+  border-bottom-color: var(--rb-accent);
+}
+
+.rb-preview-entry {
+  margin: 10px 0 6px;
+}
+
+.rb-preview-entry-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 14.5px;
+}
+
+.rb-preview-entry-head strong {
+  font-weight: 700;
+}
+
+.rb-preview-entry-sub {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13.5px;
+  font-style: italic;
+  color: #333;
+}
+
+.rb-preview-bullets {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  font-size: 13.5px;
+}
+
+.rb-preview-bullets li {
+  margin: 3px 0;
+}
+
+.rb-preview-link {
+  font-size: 12.5px;
+  color: var(--rb-accent);
+  text-decoration: underline;
+}
+
+/* Body / paragraph default sizing inside the paper. */
+.rb-preview-paper p {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+}
+
+/* Export-modal iframe holds the compiled PDF. Fills the modal vertically. */
+.rb-export-iframe {
+  display: block;
+  width: 100%;
+  height: 60vh;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+/* Mobile — collapse the editor to a single column. The preview stays
+   below the form so it's still reachable; for a phone-first experience
+   we'd add a toggle button, but resume editing on a phone is rare enough
+   that stacking is sufficient. */
+@media (max-width: 1024px) {
+  .rb-shell {
+    grid-template-columns: 1fr;
+  }
+  .rb-rail {
+    position: static;
+    max-height: none;
+  }
+  .rb-editor {
+    grid-template-columns: 1fr;
+  }
+  .rb-editor-preview {
+    position: static;
+    max-height: none;
+  }
+}
+
+/* ============================================================================
+   Resume Score (rs-*) — structured AI critique with section nav + findings.
+   Renders inside the existing Resume AI page, replacing the markdown view.
+   ============================================================================ */
+
+.rs-shell {
+  --rs-tone-good: rgba(166, 219, 138, 0.95);
+  --rs-tone-ok: rgba(232, 175, 78, 0.95);
+  --rs-tone-weak: rgba(198, 96, 80, 0.95);
+  --rs-track: rgba(255, 255, 255, 0.08);
+  --rs-pill-fix-bg: rgba(198, 96, 80, 0.18);
+  --rs-pill-fix-fg: #e6a596;
+  --rs-pill-imp-bg: rgba(232, 175, 78, 0.16);
+  --rs-pill-imp-fg: #e8c378;
+  --rs-pill-good-bg: rgba(166, 219, 138, 0.16);
+  --rs-pill-good-fg: #b6d9a5;
+  --rs-row-fix-bg: rgba(198, 96, 80, 0.07);
+  --rs-row-imp-bg: rgba(232, 175, 78, 0.06);
+  --rs-row-good-bg: rgba(166, 219, 138, 0.06);
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 28px;
+  margin-top: 24px;
+}
+
+[data-theme="light"] .rs-shell {
+  --rs-tone-good: #4a8b3c;
+  --rs-tone-ok: #c08221;
+  --rs-tone-weak: #b15239;
+  --rs-track: rgba(0, 0, 0, 0.08);
+  --rs-pill-fix-bg: #f6dcd5;
+  --rs-pill-fix-fg: #8e3520;
+  --rs-pill-imp-bg: #f6e7c4;
+  --rs-pill-imp-fg: #7a5512;
+  --rs-pill-good-bg: #dceace;
+  --rs-pill-good-fg: #3b6a2e;
+  --rs-row-fix-bg: rgba(177, 82, 57, 0.06);
+  --rs-row-imp-bg: rgba(192, 130, 33, 0.05);
+  --rs-row-good-bg: rgba(74, 139, 60, 0.05);
+}
+
+/* Page header above the shell — title + executive summary + actions. */
+.rs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-top: 8px;
+}
+.rs-header h1 {
+  font-family: var(--font-serif-stack);
+  font-size: clamp(20px, 2.4vw, 26px);
+  font-weight: 500;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+.rs-header-summary {
+  max-width: 60ch;
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+.rs-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Left rail: score circle + section nav. */
+.rs-rail {
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  border-radius: 14px;
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-self: start;
+  position: sticky;
+  top: 16px;
+}
+.rs-score-circle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.rs-score-circle-label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  margin: 0;
+}
+
+.rs-section-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rs-section-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.rs-section-row:hover {
+  background: var(--chip);
+}
+.rs-section-row.is-active {
+  background: var(--chip);
+  border-color: var(--border-strong);
+}
+.rs-section-label {
+  flex: 1;
+}
+.rs-section-chip {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 36px;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  background: var(--bg);
+  color: var(--text);
+}
+.rs-section-chip--strong {
+  background: rgba(166, 219, 138, 0.16);
+  border-color: rgba(166, 219, 138, 0.4);
+}
+.rs-section-chip--ok {
+  background: rgba(232, 175, 78, 0.14);
+  border-color: rgba(232, 175, 78, 0.38);
+}
+.rs-section-chip--weak {
+  background: rgba(198, 96, 80, 0.12);
+  border-color: rgba(198, 96, 80, 0.34);
+  color: var(--text-soft);
+}
+[data-theme="light"] .rs-section-chip--strong {
+  background: #e0efd4;
+  border-color: #b7cfa1;
+}
+[data-theme="light"] .rs-section-chip--ok {
+  background: #f4e6c4;
+  border-color: #d6c187;
+}
+[data-theme="light"] .rs-section-chip--weak {
+  background: #f0dcd4;
+  border-color: #c89c8c;
+  color: #6b3a2c;
+}
+
+/* Right panel: per-section findings. */
+.rs-section-findings {
+  min-width: 0;
+}
+.rs-section-findings-head h2 {
+  font-family: var(--font-serif-stack);
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.rs-section-findings-score {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+.rs-section-findings-score[data-score^="9"],
+.rs-section-findings-score[data-score="80"],
+.rs-section-findings-score[data-score="81"],
+.rs-section-findings-score[data-score="82"],
+.rs-section-findings-score[data-score="83"],
+.rs-section-findings-score[data-score="84"],
+.rs-section-findings-score[data-score="85"],
+.rs-section-findings-score[data-score="86"],
+.rs-section-findings-score[data-score="87"],
+.rs-section-findings-score[data-score="88"],
+.rs-section-findings-score[data-score="89"] {
+  color: var(--rs-tone-good);
+}
+.rs-section-findings-counts {
+  margin: 4px 0 16px;
+}
+
+.rs-finding-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rs-finding {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.rs-finding--fix {
+  background: var(--rs-row-fix-bg);
+}
+.rs-finding--improve {
+  background: var(--rs-row-imp-bg);
+}
+.rs-finding--good {
+  background: var(--rs-row-good-bg);
+}
+.rs-finding-text {
+  flex: 1;
+}
+.rs-finding-pill {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.rs-finding-pill--fix {
+  background: var(--rs-pill-fix-bg);
+  color: var(--rs-pill-fix-fg);
+}
+.rs-finding-pill--improve {
+  background: var(--rs-pill-imp-bg);
+  color: var(--rs-pill-imp-fg);
+}
+.rs-finding-pill--good {
+  background: var(--rs-pill-good-bg);
+  color: var(--rs-pill-good-fg);
+}
+
+/* Past reports strip below the main shell. */
+.rs-past-strip {
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.rs-past-strip h3 {
+  font-family: var(--font-serif-stack);
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0 0 10px;
+}
+.rs-past-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.rs-past-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  font-size: 13px;
+  color: var(--text);
+}
+.rs-past-row-meta {
+  flex: 1;
+  color: var(--text-soft);
+}
+.rs-past-row a {
+  color: var(--text);
+  text-decoration: none;
+}
+.rs-past-row a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 880px) {
+  .rs-shell {
+    grid-template-columns: 1fr;
+  }
+  .rs-rail {
+    position: static;
+  }
+  .rs-header {
+    flex-direction: column;
+    gap: 14px;
+  }
+  .rs-header-actions {
+    flex-wrap: wrap;
+  }
+}
+
+/* ============================================================================
+   Resume Builder — Template picker modal (TemplatePicker component).
+   Centred shell with a grid of template cards; each card renders a
+   live ResumeBuilderPreview, scaled down via CSS transform so the
+   user sees the actual look before committing.
+   ============================================================================ */
+
+.rb-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 800;
+  background: rgba(8, 8, 8, 0.6);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.rb-picker-shell {
+  width: min(960px, 100%);
+  max-height: calc(100vh - 48px);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.rb-picker-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.rb-picker-title {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-size: 20px;
+  font-weight: 500;
+}
+.rb-picker-sub {
+  margin: 4px 0 0;
+  max-width: 56ch;
+}
+
+/* Flex-wrap with fixed-width portrait cards. flex-grow disabled so a
+   single card doesn't stretch to fill the row — keeps the preview
+   portrait-shaped. As more templates are registered, they wrap into
+   additional rows. */
+.rb-picker-grid {
+  --rb-card-w: 220px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 22px 24px 28px;
+  overflow-y: auto;
+  align-content: flex-start;
+}
+
+.rb-picker-card {
+  width: var(--rb-card-w);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-soft);
+  overflow: hidden;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+.rb-picker-card:hover {
+  border-color: var(--border-strong);
+}
+
+/* Live preview thumbnail. The preview component renders at its real
+   resume size (816px width = Letter @ 96 DPI); we shrink it via
+   transform: scale on the inner wrapper. The outer .rb-picker-thumb
+   clips overflow and locks the portrait aspect ratio (Letter ~0.77).
+   Scale = card-width (220px) / source width (816px) ≈ 0.27. */
+.rb-picker-thumb {
+  position: relative;
+  overflow: hidden;
+  background: #f6f3ec;
+  aspect-ratio: 816 / 1056;
+  width: 100%;
+}
+.rb-picker-thumb-scale {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 816px;
+  transform: scale(0.27);
+  transform-origin: 0 0;
+  pointer-events: none;
+  user-select: none;
+}
+/* The preview component scrolls multi-page resumes; lock it inside
+   the card so the thumb shows one page at a time. */
+.rb-picker-thumb-scale .rb-preview-pager {
+  display: none !important;
+}
+.rb-picker-thumb-scale .rb-preview-paper {
+  margin: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.rb-picker-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px 14px;
+}
+.rb-picker-card-name {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-size: 16px;
+  font-weight: 500;
+}
+.rb-picker-card-desc {
+  /* Constrain to 2 lines so cards stay uniform height even when
+     descriptions differ. The clamp falls back gracefully on browsers
+     that don't support line-clamp. */
+  margin: 0;
+  line-height: 1.45;
+  font-size: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rb-picker-card-tags {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.rb-picker-card-tags li {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--text-soft);
+  letter-spacing: 0.02em;
+}
+.rb-picker-cta {
+  margin-top: 4px;
+  width: 100%;
+  text-align: center;
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
+@media (max-width: 600px) {
+  .rb-picker-grid {
+    --rb-card-w: 100%;
+    justify-content: center;
+  }
+  .rb-picker-thumb-scale {
+    /* On small screens, the card is full-width — recompute the scale
+       so the preview fills it. Browsers without container queries
+       use a slightly-larger fixed scale. */
+    transform: scale(0.42);
+  }
+}
+
+/* ============================================================================
+   Resume Score — pending loader (async generation in flight).
+   Full-page, minimal: a document icon centred in a rotating ring + two
+   lines of copy. Matches the Naukri-style "analyzing" screen.
+   ============================================================================ */
+.rs-pending-loader {
+  margin: 0;
+  padding: 120px 24px 80px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.rs-pending-ring {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  /* The "spin" effect: a conic-gradient overlay rotates around the
+     ring, creating the impression of a moving highlight. The base
+     border stays put so the document icon doesn't drift. */
+  display: grid;
+  place-items: center;
+  color: var(--text);
+}
+.rs-pending-ring::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--text);
+  animation: rs-spin 1.1s linear infinite;
+}
+@keyframes rs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.rs-pending-title {
+  margin: 8px 0 0;
+  font-family: var(--font-serif-stack);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--text);
+}
+.rs-pending-sub {
+  max-width: 36ch;
+  margin: 0;
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+/* ============================================================================
+   Resume Score v2.1 — core diagnosis (sits above the verdict row).
+   ============================================================================ */
+
+.rs-core-diagnosis {
+  margin: 20px 0 18px;
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-soft);
+}
+.rs-core-diagnosis-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  font-weight: 600;
+}
+.rs-core-diagnosis-head h2 {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-size: clamp(18px, 2.2vw, 22px);
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+}
+.rs-core-diagnosis-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.rs-core-diagnosis-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rs-core-diagnosis-label {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  font-weight: 600;
+}
+.rs-core-diagnosis-value {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.rs-identity-match {
+  color: var(--rs-tone-good);
+}
+.rs-identity-mismatch {
+  color: var(--rs-tone-weak);
+}
+.rs-identity-unclear {
+  color: var(--rs-tone-ok);
+}
+.rs-archetype-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  background: var(--chip);
+  color: var(--text);
+}
+.rs-hidden-story {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.rs-hidden-story-text {
+  margin: 6px 0 0;
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.rs-why-line {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+.rs-why-label {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+/* ============================================================================
+   Resume Score v2 — verdict pill, score-row, section-bars, tabs,
+   checklist, improvement plan. Builds on the v1 .rs-shell tokens.
+   ============================================================================ */
+
+.rs-verdict-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin: 6px 0 12px;
+}
+.rs-verdict-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.rs-verdict-pill--yes {
+  background: var(--rs-pill-good-bg);
+  color: var(--rs-pill-good-fg);
+}
+.rs-verdict-pill--maybe {
+  background: var(--rs-pill-imp-bg);
+  color: var(--rs-pill-imp-fg);
+}
+.rs-verdict-pill--no {
+  background: var(--rs-pill-fix-bg);
+  color: var(--rs-pill-fix-fg);
+}
+.rs-verdict-tagline {
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  color: var(--text-soft);
+  font-size: 14px;
+  flex: 1;
+  min-width: 260px;
+}
+
+/* Score row: overall + ATS + section bars side-by-side */
+.rs-score-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 24px;
+  align-items: center;
+  margin: 18px 0 22px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-soft);
+}
+.rs-ats-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rs-section-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.rs-section-bar {
+  display: grid;
+  grid-template-columns: 140px 1fr 36px;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.rs-section-bar-label {
+  color: var(--text-soft);
+}
+.rs-section-bar-track {
+  height: 10px;
+  background: var(--rs-track);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.rs-section-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+.rs-section-bar-fill--strong {
+  background: var(--rs-tone-good);
+}
+.rs-section-bar-fill--ok {
+  background: var(--rs-tone-ok);
+}
+.rs-section-bar-fill--weak {
+  background: var(--rs-tone-weak);
+}
+.rs-section-bar-score {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Tabs */
+.rs-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  margin-bottom: 16px;
+}
+.rs-tab {
+  background: transparent;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-soft);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 120ms ease, color 120ms ease;
+}
+.rs-tab:hover {
+  color: var(--text);
+  background: var(--chip);
+}
+.rs-tab.is-active {
+  background: var(--chip);
+  color: var(--text);
+}
+
+/* Checklist */
+.rs-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.rs-checklist-banner {
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--chip);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.rs-checklist-banner a {
+  color: var(--text);
+  text-decoration: underline;
+  font-weight: 500;
+}
+.rs-checklist-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rs-checklist-group-head h3 {
+  font-family: var(--font-serif-stack);
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0;
+  color: var(--text);
+}
+.rs-checklist-group-head p {
+  margin: 2px 0 0;
+}
+.rs-checklist-group-counts {
+  margin-top: 4px !important;
+}
+.rs-checklist-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rs-checklist-row {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-soft);
+}
+.rs-checklist-row--fail {
+  background: var(--rs-row-fix-bg);
+}
+.rs-checklist-row--warn {
+  background: var(--rs-row-imp-bg);
+}
+.rs-checklist-row--pass {
+  background: var(--rs-row-good-bg);
+}
+.rs-checklist-row--na {
+  opacity: 0.65;
+}
+.rs-status-pill {
+  display: inline-flex;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  height: fit-content;
+}
+.rs-status-pill--pass {
+  background: var(--rs-pill-good-bg);
+  color: var(--rs-pill-good-fg);
+}
+.rs-status-pill--warn {
+  background: var(--rs-pill-imp-bg);
+  color: var(--rs-pill-imp-fg);
+}
+.rs-status-pill--fail {
+  background: var(--rs-pill-fix-bg);
+  color: var(--rs-pill-fix-fg);
+}
+.rs-status-pill--na {
+  background: var(--chip);
+  color: var(--text-soft);
+}
+.rs-checklist-body {
+  min-width: 0;
+}
+.rs-checklist-title {
+  display: block;
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.rs-checklist-evidence {
+  margin: 4px 0 0;
+}
+
+/* Improvement plan */
+.rs-improvement-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.rs-improvement-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-soft);
+}
+.rs-improvement-card-head {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+.rs-improvement-card-number {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-soft);
+}
+.rs-improvement-card-titles {
+  min-width: 0;
+}
+.rs-improvement-card-title {
+  margin: 0;
+  font-family: var(--font-serif-stack);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+}
+.rs-improvement-card-where {
+  margin: 4px 0 0 !important;
+}
+.rs-improvement-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.rs-improvement-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-soft);
+}
+.rs-improvement-pill--effort-high,
+.rs-improvement-pill--impact-high {
+  border-color: rgba(166, 219, 138, 0.4);
+  background: rgba(166, 219, 138, 0.12);
+  color: var(--rs-pill-good-fg);
+}
+.rs-improvement-pill--effort-medium,
+.rs-improvement-pill--impact-medium {
+  border-color: rgba(232, 175, 78, 0.36);
+  background: rgba(232, 175, 78, 0.10);
+  color: var(--rs-pill-imp-fg);
+}
+.rs-improvement-pill--effort-low,
+.rs-improvement-pill--impact-low {
+  border-color: var(--border);
+  background: var(--chip);
+  color: var(--text-soft);
+}
+.rs-before-block,
+.rs-after-block {
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.rs-before-block {
+  background: var(--rs-row-fix-bg);
+}
+.rs-after-block {
+  background: var(--rs-row-good-bg);
+}
+.rs-block-label {
+  margin: 0 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+.rs-block-text {
+  margin: 0;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+@media (max-width: 880px) {
+  .rs-score-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .rs-section-bar {
+    grid-template-columns: 110px 1fr 32px;
+  }
+  .rs-checklist-row {
+    grid-template-columns: 56px 1fr;
+  }
+  .rs-improvement-card-head {
+    grid-template-columns: 28px 1fr;
+  }
+  .rs-improvement-pills {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+

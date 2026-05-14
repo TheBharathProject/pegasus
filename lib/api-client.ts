@@ -406,22 +406,118 @@ export type ApiReminder = {
   updatedAt: string;
 };
 
+// Resume Score — structured score-report types. Wire shape matches
+// ai.ScoreReport in sypher-api/internal/ai/types.go.
+
+export type ApiFindingTag = "fix" | "improve" | "good";
+
+export type ApiScoreFinding = {
+  tag: ApiFindingTag;
+  text: string;
+};
+
+export type ApiScoreSection = {
+  score: number;
+  findings: ApiScoreFinding[];
+};
+
+// v2 verdict / checklist / improvement-plan types.
+export type ApiVerdictPile = "yes" | "maybe" | "no";
+
+export type ApiChecklistStatus = "pass" | "warn" | "fail" | "na";
+
+export type ApiChecklistGroup =
+  | "common_mistakes"
+  | "dos_donts"
+  | "stands_out";
+
+export type ApiChecklistItem = {
+  id: string;
+  title: string;
+  group: ApiChecklistGroup;
+  status: ApiChecklistStatus;
+  evidence: string;
+};
+
+export type ApiEffort = "low" | "medium" | "high";
+export type ApiImpact = "low" | "medium" | "high";
+
+export type ApiImprovementPlanItem = {
+  title: string;
+  where: string;
+  effort: ApiEffort;
+  impact: ApiImpact;
+  before: string;
+  after: string;
+  // v2.1: the principle behind the rewrite so the candidate can
+  // generalise it ("adds baseline so the % means something").
+  why?: string;
+};
+
+// v2.1: diagnosis-first block borrowed from the resume-analyzer skill.
+// Anchors the report — rendered at the very top of the Results step.
+export type ApiIdentityMatch = "match" | "mismatch" | "unclear";
+export type ApiArchetype =
+  | "identity_crisis"
+  | "underseller"
+  | "overseller"
+  | "list_of_jobs"
+  | "duty_lister"
+  | "career_changer"
+  | "long_in_the_tooth"
+  | "junior_looking_senior"
+  | "senior_looking_junior"
+  | "tool_lister"
+  | "";
+
+export type ApiCoreDiagnosis = {
+  six_second_verdict: string;
+  identity_match: ApiIdentityMatch;
+  archetype?: ApiArchetype;
+  hidden_story: string;
+  core_problem: string;
+};
+
+export type ApiScoreReport = {
+  overall_score: number;
+  // v2-only fields below. v1 reports leave these undefined/empty;
+  // FE/PDF render layers detect v2 via (ats_score > 0 && checklist.length > 0).
+  ats_score?: number;
+  verdict_pile?: ApiVerdictPile;
+  verdict_tagline?: string;
+  // v2.1: diagnosis block. Optional — earlier v2 reports lack it.
+  core_diagnosis?: ApiCoreDiagnosis;
+  executive_summary: string;
+  // Section keys are stable strings — see SECTION_ORDER in components/resume-score.
+  sections: Record<string, ApiScoreSection>;
+  checklist?: ApiChecklistItem[];
+  improvement_plan?: ApiImprovementPlanItem[];
+};
+
 // ApiAIReport mirrors the full row shape from GET /ai/resume/report/latest
-// and GET /ai/resume/reports/{id} (Activity panel drill-in).
+// and GET /ai/resume/reports/{id}. The `format` discriminator tells the FE
+// whether to render `reportMd` (legacy Markdown), `reportJson` (new
+// structured Resume Score), or show a loader when the async generation
+// hasn't completed yet (`pending`).
 export type ApiAIReport = {
   id: string;
   resumeFileId?: string;
-  reportMd: string;
+  draftId?: string;
+  format: "json" | "md" | "pending";
+  reportMd?: string;
+  reportJson?: ApiScoreReport;
   score: number;
   createdAt: string;
 };
 
 // ApiAIReportSummary is the lightweight row shape for the list endpoint.
-// No markdown body — fetch the full report by id when the user drills in.
+// No body — fetch the full report by id when the user drills in.
 export type ApiAIReportSummary = {
   id: string;
   resumeFileId?: string;
   resumeFilename?: string;
+  draftId?: string;
+  format: "json" | "md" | "pending";
   score: number;
   createdAt: string;
 };
@@ -434,6 +530,98 @@ export type ApiAIReportsResponse = {
 export type ApiApplicationPage = {
   items: ApiApplication[];
   nextCursor?: string;
+};
+
+// ============================================================================
+// Resume Builder — types mirror backend internal/jobtracker/types.go
+// (DraftContent + ResumeBuilderDraft + ResumeBuilderDraftSummary).
+// ============================================================================
+
+export type ApiDraftPersonal = {
+  name: string;
+  headline?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  linkedinUrl?: string;
+  githubUrl?: string;
+  websiteUrl?: string;
+};
+
+export type ApiDraftExperience = {
+  company: string;
+  title: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  current: boolean;
+  description?: string[];
+};
+
+export type ApiDraftEducation = {
+  school: string;
+  degree?: string;
+  field?: string;
+  startDate?: string;
+  endDate?: string;
+  gpa?: string;
+  description?: string;
+};
+
+export type ApiDraftProject = {
+  name: string;
+  description?: string;
+  techStack?: string;
+  link?: string;
+};
+
+export type ApiDraftSkillGroup = {
+  category: string;
+  items: string[];
+};
+
+// User-tweakable visual options. All fields optional; missing values fall
+// back to the v1 defaults at render time (both preview + LaTeX).
+export type ApiDraftStyle = {
+  accentColor?: string;                          // "#1a1a1a" default
+  sectionDivider?: "solid" | "dashed" | "none";  // "solid" default
+  fontFamily?: "serif" | "sans";                 // "serif" default
+  headerAlignment?: "center" | "left";           // "center" default
+};
+
+export type ApiDraftContent = {
+  personal: ApiDraftPersonal;
+  summary?: string;
+  experiences?: ApiDraftExperience[];
+  educations?: ApiDraftEducation[];
+  projects?: ApiDraftProject[];
+  skills?: ApiDraftSkillGroup[];
+  style?: ApiDraftStyle;
+  // When non-empty, the export pipeline ships this exact .tex string and
+  // skips template rendering. The form-driven fields stay populated so
+  // switching back to "Form" mode discards CustomTeX and re-derives.
+  customTex?: string;
+};
+
+export type ApiResumeBuilderDraft = {
+  id: string;
+  title: string;
+  templateId: string;
+  content: ApiDraftContent;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ApiResumeBuilderDraftSummary = {
+  id: string;
+  title: string;
+  templateId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ApiResumeBuilderDraftsResponse = {
+  items: ApiResumeBuilderDraftSummary[];
 };
 
 export async function downloadPDF(
