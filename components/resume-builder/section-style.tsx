@@ -1,6 +1,10 @@
 "use client";
 
 import { defaultStyle } from "@/lib/resume-builder-content";
+import {
+  FONT_OPTIONS,
+  normalizeFontFamily
+} from "@/lib/resume-builder/font-registry";
 import type { ApiDraftStyle } from "@/lib/api-client";
 
 // Style controls — accent colour + divider + font + header alignment.
@@ -109,7 +113,9 @@ export function SectionStyle({
           <select
             id="rb-font"
             className="filter-select"
-            value={v.fontFamily}
+            // Coerce legacy "serif"/"sans" to the new IDs so the dropdown
+            // shows the right item for old drafts.
+            value={normalizeFontFamily(v.fontFamily)}
             onChange={(e) =>
               set(
                 "fontFamily",
@@ -117,8 +123,11 @@ export function SectionStyle({
               )
             }
           >
-            <option value="serif">Serif (Latin Modern)</option>
-            <option value="sans">Sans-serif (Helvetica)</option>
+            {FONT_OPTIONS.map((f) => (
+              <option key={f.id} value={f.id} style={{ fontFamily: f.webStack }}>
+                {f.label}
+              </option>
+            ))}
           </select>
         </div>
 

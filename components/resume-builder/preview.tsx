@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
+import { FONTS, normalizeFontFamily } from "@/lib/resume-builder/font-registry";
 import type { ApiDraftContent } from "@/lib/api-client";
 
 // Resume preview — HTML approximation of the LaTeX classic-v1 template.
@@ -14,22 +15,22 @@ import type { ApiDraftContent } from "@/lib/api-client";
 // is provided by Tectonic at export time; this is an editor-time visual
 // aid that's "close enough" to make page-fit decisions.
 
-// Visual page dimensions. Letter is 8.5×11 (ratio 1.294); we scale to fit
-// the preview pane width. The chosen base height of 1056 corresponds to
-// US Letter at 96dpi; the rendered card gets CSS-scaled to the pane width.
+// Visual page dimensions matched to the LaTeX template's
+// `\documentclass[11pt,a4paper]` + `\usepackage[margin=0.7in]{geometry}`.
+// A4 at 96dpi is 794×1123 px; 0.7in margins map to 67px on every side.
+// Keeping these in sync with the compile template means the HTML preview
+// paginates at the same content-height as the PDF — no more "two pages
+// here, one page there" surprises.
 //
-// PAGE_MARGIN_TOP/BOTTOM carve out a visible whitespace band at the top
-// and bottom of every page card. Without them, page 2's content sat
-// flush against the top edge because the slice translation just shows
-// "whatever was at y = i * PAGE_BASE_HEIGHT" without per-page padding.
-// The content slice now lives inside an inner clipping area whose height
-// is PAGE_CONTENT_HEIGHT (936px), and pagination is computed against
-// that height — so a 1900px content produces 3 pages, not 2 squished
-// against a flush edge.
-const PAGE_BASE_WIDTH = 816; // 8.5in × 96dpi
-const PAGE_BASE_HEIGHT = 1056; // 11in × 96dpi
-const PAGE_MARGIN_TOP = 60;
-const PAGE_MARGIN_BOTTOM = 60;
+// PAGE_MARGIN_TOP/BOTTOM carve out the visible top/bottom whitespace
+// band on each page card so content sits inside a safe zone instead of
+// flush against the card edge. Pagination is computed against
+// PAGE_CONTENT_HEIGHT (height minus both margins), so a tall content
+// tree splits into pages at the same Y the LaTeX compiler would.
+const PAGE_BASE_WIDTH = 794; // 8.27in (A4) × 96dpi
+const PAGE_BASE_HEIGHT = 1123; // 11.69in (A4) × 96dpi
+const PAGE_MARGIN_TOP = 67; // 0.7in × 96dpi — matches geometry margin
+const PAGE_MARGIN_BOTTOM = 67;
 const PAGE_CONTENT_HEIGHT = PAGE_BASE_HEIGHT - PAGE_MARGIN_TOP - PAGE_MARGIN_BOTTOM;
 
 export function ResumeBuilderPreview({ content }: { content: ApiDraftContent }) {
@@ -145,19 +146,16 @@ function PageInnerContent({ content }: { content: ApiDraftContent }) {
   const style = content.style ?? {};
   const accent = style.accentColor ?? "#1a1a1a";
   const divider = style.sectionDivider ?? "solid";
-  const fontFamily = style.fontFamily ?? "serif";
   const headerAlign = style.headerAlignment ?? "center";
 
   // Translate divider keyword into a CSS border style.
   const dividerCss =
     divider === "none" ? "none" : divider === "dashed" ? "dashed" : "solid";
 
-  // Translate font keyword into the actual stack. "sans" picks a Helvetica-
-  // adjacent system stack since Latin Modern Sans isn't web-available.
-  const fontStack =
-    fontFamily === "sans"
-      ? `"Helvetica Neue", Helvetica, Arial, sans-serif`
-      : `"Charter", "Iowan Old Style", "Georgia", serif`;
+  // Font family is looked up via the shared registry so the HTML web
+  // stack matches the LaTeX template's `\usepackage{…}` choice. Legacy
+  // "serif"/"sans" values get normalized to their new IDs.
+  const fontStack = FONTS[normalizeFontFamily(style.fontFamily)].webStack;
 
   // CSS custom props — consumed by .rb-preview-paper rules in globals.css.
   const paperStyle: React.CSSProperties = {

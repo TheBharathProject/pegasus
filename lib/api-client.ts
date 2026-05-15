@@ -585,7 +585,19 @@ export type ApiDraftSkillGroup = {
 export type ApiDraftStyle = {
   accentColor?: string;                          // "#1a1a1a" default
   sectionDivider?: "solid" | "dashed" | "none";  // "solid" default
-  fontFamily?: "serif" | "sans";                 // "serif" default
+  // Font family — paired between HTML preview and the LaTeX compile so
+  // both sides use the same family. See lib/resume-builder/font-registry.ts
+  // for the full list. "serif" / "sans" are legacy aliases kept for older
+  // drafts; normalizeFontFamily() maps them on read.
+  fontFamily?:
+    | "lmodern"
+    | "helvetica"
+    | "times"
+    | "palatino"
+    | "charter"
+    | "ebgaramond"
+    | "serif"
+    | "sans";
   headerAlignment?: "center" | "left";           // "center" default
 };
 

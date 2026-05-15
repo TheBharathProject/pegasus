@@ -3,7 +3,8 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductFrame } from "@/components/frames";
-import { PlusIcon, ResumeBuilderIcon, SparkleStarIcon, TrashIcon } from "@/components/icons";
+import { ResumeBuilderIcon, SparkleStarIcon, TrashIcon } from "@/components/icons";
+import { DraftsGallery } from "@/components/resume-builder/drafts-gallery";
 import { ResumeBuilderEditor } from "@/components/resume-builder/editor";
 import { ExportModal } from "@/components/resume-builder/export-modal";
 import { TemplatePicker } from "@/components/resume-builder/template-picker";
@@ -263,18 +264,59 @@ function ResumeBuilderInner() {
     }
   };
 
+  const handleDeleteFromGallery = async (
+    summary: { id: string; title: string }
+  ) => {
+    if (
+      !window.confirm(`Delete "${summary.title}"? This cannot be undone.`)
+    ) {
+      return;
+    }
+    try {
+      await deleteDraft(summary.id);
+      void reloadDrafts();
+      if (summary.id === draftIdFromUrl) {
+        setCurrent(null);
+        router.push("/resume-builder", { scroll: false });
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  // Back to the gallery from the editor. The useEffect on draftIdFromUrl
+  // will null out `current` when the query param disappears, but we
+  // clear it eagerly here for a snappier feel.
+  const handleBackToGallery = () => {
+    setCurrent(null);
+    router.push("/resume-builder", { scroll: false });
+  };
+
   // ----- Renders -----
-  const showEmptyState = !draftsLoading && drafts.length === 0 && !current;
-  const showDraftsRail = drafts.length > 0 || !!current;
+  // Three view states:
+  //   1. empty — no drafts at all → big onboarding CTA
+  //   2. gallery — drafts exist, none selected → full-width grid
+  //   3. editor — ?draft=<id> in URL → full-width editor + back link
+  const isEditorView = !!draftIdFromUrl;
+  const showEmptyState =
+    !draftsLoading && drafts.length === 0 && !isEditorView;
 
   return (
     <ProductFrame
       active="resume_builder"
-      title="Resume Builder"
-      intro="Build an ATS-friendly LaTeX resume from your profile data. Live preview, exports straight to your Vault."
+      // In editor view, the draft's own title input acts as the page
+      // header — so we suppress ProductFrame's title/intro and let the
+      // editor own the visual hierarchy. Outside the editor (gallery /
+      // onboarding), the standard frame title + intro stay.
+      title={isEditorView ? undefined : "Resume Builder"}
+      intro={
+        isEditorView
+          ? undefined
+          : "Build an ATS-friendly LaTeX resume from your profile data. Live preview, exports straight to your Vault."
+      }
       actions={
-        current ? (
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        isEditorView && current ? (
+          <>
             <SaveBadge status={saveStatus} />
             <button
               type="button"
@@ -300,18 +342,8 @@ function ResumeBuilderInner() {
             >
               Export → PDF
             </button>
-          </div>
-        ) : drafts.length > 0 ? (
-          <button
-            type="button"
-            className="primary-button"
-            onClick={handleStartSample}
-            disabled={creating}
-          >
-            <PlusIcon width={14} height={14} />{" "}
-            {creating ? "Creating…" : "New from sample"}
-          </button>
-        ) : null
+          </>
+        ) : undefined
       }
     >
       {error ? (
@@ -367,66 +399,57 @@ function ResumeBuilderInner() {
             </button>
           </div>
         </div>
-      ) : showDraftsRail ? (
-        <div className="rb-shell">
-          <aside className="rb-rail">
-            <header className="rb-rail-head">
-              <span className="rb-rail-head-label">Drafts</span>
-              <span className="rb-rail-count" aria-hidden>
-                {drafts.length}
-              </span>
-            </header>
-            <button
-              type="button"
-              className="rb-rail-new"
-              onClick={handleStartSample}
-              disabled={creating}
-            >
-              <PlusIcon width={12} height={12} />
-              <span>{creating ? "Creating…" : "New draft"}</span>
-            </button>
-            {draftsLoading ? (
-              <p className="muted small" style={{ padding: "12px 14px" }}>
-                Loading…
-              </p>
-            ) : (
-              <ul className="rb-draft-list">
-                {drafts.map((d) => (
-                  <li
-                    key={d.id}
-                    className={
-                      d.id === current?.id
-                        ? "rb-draft-item is-active"
-                        : "rb-draft-item"
-                    }
-                    onClick={() => openDraft(d.id)}
-                  >
-                    <p className="rb-draft-title">{d.title}</p>
-                    <p className="muted small rb-draft-sub">
-                      {relativeTime(d.updatedAt)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </aside>
-          <main className="rb-main">
-            {currentLoading ? (
-              <p className="muted small">Loading draft…</p>
-            ) : current ? (
-              <ResumeBuilderEditor
-                draft={current}
-                onChange={onEditorChange}
+      ) : isEditorView ? (
+        <div className="rb-editor-wrap">
+          <button
+            type="button"
+            className="rb-back-link"
+            onClick={handleBackToGallery}
+          >
+            <svg viewBox="0 0 14 14" width="12" height="12" aria-hidden>
+              <path
+                d="M11 7H3M6.5 3.5L3 7l3.5 3.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
-            ) : (
-              <div className="community-empty" style={{ marginTop: 12 }}>
-                <h3>Pick a draft from the left</h3>
-                <p>Or start a new one with the + button.</p>
-              </div>
-            )}
-          </main>
+            </svg>
+            All drafts
+          </button>
+          {currentLoading ? (
+            <p className="muted small" style={{ marginTop: 12 }}>
+              Loading draft…
+            </p>
+          ) : current ? (
+            <ResumeBuilderEditor
+              draft={current}
+              onChange={onEditorChange}
+            />
+          ) : (
+            <div className="community-empty" style={{ marginTop: 12 }}>
+              <h3>Draft not found</h3>
+              <p>
+                It may have been deleted from another tab. Pick another draft
+                or start a new one.
+              </p>
+            </div>
+          )}
         </div>
-      ) : null}
+      ) : (
+        <DraftsGallery
+          drafts={drafts}
+          loading={draftsLoading}
+          creating={creating}
+          activeId={draftIdFromUrl}
+          onOpen={openDraft}
+          onNew={handleStartSample}
+          onDelete={(d) =>
+            void handleDeleteFromGallery({ id: d.id, title: d.title })
+          }
+        />
+      )}
 
       {showExport && current ? (
         <ExportModal
@@ -489,21 +512,6 @@ function SaveBadge({ status }: { status: SaveStatus }) {
       Save failed
     </span>
   );
-}
-
-function relativeTime(iso: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const secs = Math.round((Date.now() - d.getTime()) / 1000);
-  if (secs < 60) return "just now";
-  const mins = Math.round(secs / 60);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.round(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.round(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 export default function ResumeBuilderPage() {

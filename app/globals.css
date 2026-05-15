@@ -11418,167 +11418,341 @@ html[data-sb="expanded"] .product-frame {
    The real PDF compile happens in the export modal via Tectonic.
    ===================================================================== */
 
-/* Top-level shell — drafts rail + main editor area. */
-.rb-shell {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 18px;
-  margin-top: 16px;
+/* Editor view wrapper — replaces the old .rb-shell grid. The editor
+   now takes the full content width, with a small back-to-gallery
+   link as the first child. */
+.rb-editor-wrap {
+  margin-top: 8px;
 }
 
-.rb-rail {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-soft);
-  overflow: hidden;
-  align-self: start;
-  position: sticky;
-  top: 18px;
-  max-height: calc(100vh - 100px);
-  overflow-y: auto;
-}
-
-.rb-rail-head {
-  display: flex;
+/* Back-to-gallery link. Mono small-caps so it reads as a navigation
+   marker, not a button. The arrow nudges left on hover for a tiny
+   "yes, this goes back" affordance. */
+.rb-back-link {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px 10px;
-  font-size: 10px;
+  margin-bottom: 14px;
+  padding: 4px 0;
+  background: transparent;
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+.rb-back-link:hover {
+  color: var(--stage-interest);
+}
+.rb-back-link svg {
+  transition: transform 160ms ease;
+}
+.rb-back-link:hover svg {
+  transform: translateX(-2px);
+}
+.rb-back-link:focus-visible {
+  outline: 1px dashed var(--text-faint);
+  outline-offset: 4px;
+  color: var(--text);
+}
+
+/* ─── Drafts gallery (replaces the old left rail) ───────────────────
+   Cards in a responsive grid. The first cell is a dashed-border
+   "Start something new" CTA; the rest are existing drafts, each a
+   clickable card with hover-revealed trash + arrow affordances. */
+.rb-gallery {
+  margin-top: 18px;
+}
+
+.rb-gallery-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.rb-gallery-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--text-faint);
 }
 
-.rb-rail-head-label {
+.rb-gallery-count {
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+.rb-gallery-head-spacer {
   flex: 1;
 }
 
-/* Count chip beside "Drafts" — tiny serif numeral to make the rail
-   feel less administrative and more like a counted index. */
-.rb-rail-count {
-  font-family: var(--font-serif-stack);
-  font-size: 13px;
-  letter-spacing: 0;
-  font-style: italic;
-  color: var(--text-soft);
-  text-transform: none;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  line-height: 1.4;
-}
-
-/* Full-width New draft CTA at the top of the rail. Replaces the old
-   tiny "+" icon in the header so the action reads as the first thing
-   the user can do, not a corner ornament. */
-.rb-rail-new {
-  display: flex;
+.rb-gallery-head-new {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 6px;
-  width: calc(100% - 20px);
-  margin: 0 10px 10px;
-  padding: 8px 10px;
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text);
-  background: var(--bg);
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: 8px;
+  padding: 7px 12px;
   cursor: pointer;
   transition:
     color 140ms ease,
     border-color 140ms ease,
     background 140ms ease;
 }
-
-.rb-rail-new:hover:not(:disabled) {
-  border-color: var(--stage-interest);
+.rb-gallery-head-new:hover:not(:disabled) {
   color: var(--stage-interest);
+  border-color: var(--stage-interest);
   background: rgba(214, 188, 142, 0.06);
 }
-
-.rb-rail-new:focus-visible {
-  outline: none;
-  border-color: var(--stage-interest);
-  box-shadow: 0 0 0 2px rgba(214, 188, 142, 0.25);
-}
-
-.rb-rail-new:disabled {
+.rb-gallery-head-new:disabled {
   opacity: 0.5;
   cursor: progress;
 }
 
-.rb-draft-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border-top: 1px solid var(--border);
+.rb-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
 }
 
-.rb-draft-item {
-  padding: 10px 14px;
-  cursor: pointer;
-  border-bottom: 1px solid var(--border);
-  transition: background 140ms ease;
+/* Card base — both the "New" CTA and existing-draft cards inherit
+   from this. Position relative for the absolute-positioned delete
+   button + corner bookmark accent. */
+.rb-gallery-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 156px;
+  padding: 18px 18px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+
+  /* Stagger reveal — driven by inline animation-delay on each card. */
+  opacity: 0;
+  animation: rb-gallery-card-in 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-.rb-draft-item:last-child {
-  border-bottom: 0;
-}
-
-@media (hover: hover) {
-  .rb-draft-item:hover {
-    background: var(--bg);
+@keyframes rb-gallery-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.rb-draft-item.is-active {
-  background: var(--bg);
-  padding-left: 16px;
-}
-
-/* Warm-cream side rail on the active draft — same tone we use for
-   stage accents elsewhere. Reads brighter than the previous flat
-   2px border, ties the rail back to the Pegasus accent palette. */
-.rb-draft-item.is-active::before {
+/* Corner-bookmark accent — a 28px warm-cream rule that appears at
+   the top edge of a hovered card. Subtle but distinctive; reads as
+   "this is the one you're considering." */
+.rb-gallery-card::before {
   content: "";
   position: absolute;
-  left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 3px;
+  top: -1px;
+  left: 18px;
+  width: 28px;
+  height: 2px;
   background: var(--stage-interest);
-  border-radius: 0 2px 2px 0;
+  border-radius: 0 0 2px 2px;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.rb-gallery-card:hover::before {
+  opacity: 1;
 }
 
-.rb-draft-item.is-active .rb-draft-title {
+.rb-gallery-card:hover {
+  border-color: var(--border-strong);
+}
+
+/* Active state — when the gallery is rendered with an activeId
+   (rare; mostly during the brief moment between URL change and
+   editor mount), the matching card gets a persistent bookmark. */
+.rb-gallery-card.is-active::before {
+  opacity: 1;
+}
+
+/* Whole-card click target — invisible absolute button that sits
+   above the card's body. Keeps keyboard activation free (real
+   <button>) while letting the delete button stop propagation. */
+.rb-gallery-card-open {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.rb-gallery-card-open:focus-visible {
+  outline: 1px dashed var(--stage-interest);
+  outline-offset: -3px;
+}
+
+.rb-gallery-card-title {
+  font-family: var(--font-serif-stack);
+  font-size: 19px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  font-weight: 400;
   color: var(--text);
-  font-weight: 600;
-}
-
-.rb-draft-title {
   margin: 0;
-  font-size: 13px;
-  color: var(--text-soft);
-  font-weight: 500;
+  /* Two-line clamp for long titles. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: color 140ms ease;
+  /* Sits above the absolute open button so the title isn't unselectable. */
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
 }
 
-.rb-draft-sub {
-  margin: 2px 0 0;
-  font-size: 11px;
+.rb-gallery-card-meta {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
 }
 
-.rb-main {
-  min-width: 0;
+.rb-gallery-card-time {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.rb-gallery-card-arrow {
+  display: inline-flex;
+  color: var(--text-faint);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease,
+    color 160ms ease;
+}
+.rb-gallery-card:hover .rb-gallery-card-arrow {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--stage-interest);
+}
+
+/* Delete affordance — top-right, fades in on hover. z-index above
+   the .rb-gallery-card-open so clicks register on the trash, not
+   on the underlying open button. */
+.rb-gallery-card-delete {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  z-index: 2;
+  transition:
+    opacity 160ms ease,
+    color 140ms ease,
+    background 140ms ease;
+}
+.rb-gallery-card:hover .rb-gallery-card-delete {
+  opacity: 1;
+}
+.rb-gallery-card-delete:hover {
+  color: #d99088;
+  background: rgba(217, 144, 136, 0.08);
+}
+
+/* The "Start something new" CTA card — dashed border + center
+   alignment, serif italic prompt. Sits first in the grid. */
+.rb-gallery-card-new {
+  border-style: dashed;
+  background: transparent;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  cursor: pointer;
+  /* Suppress the corner bookmark — this card has its own treatment. */
+}
+.rb-gallery-card-new::before {
+  display: none;
+}
+.rb-gallery-card-new:hover:not(:disabled) {
+  border-color: var(--stage-interest);
+}
+.rb-gallery-card-new:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.rb-gallery-card-new-plus {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-soft);
+  transition:
+    border-color 160ms ease,
+    color 160ms ease;
+}
+.rb-gallery-card-new:hover .rb-gallery-card-new-plus {
+  border-color: var(--stage-interest);
+  color: var(--stage-interest);
+}
+
+.rb-gallery-card-new-title {
+  display: block;
+  font-family: var(--font-serif-stack);
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.3;
+  color: var(--text-soft);
+  margin-bottom: 4px;
+}
+
+.rb-gallery-card-new-sub {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
 
 /* Editor — split-pane form + preview. */
@@ -11628,11 +11802,15 @@ html[data-sb="expanded"] .product-frame {
   background: transparent;
   border: 0;
   outline: none;
-  padding: 6px 0 8px;
+  padding: 4px 0 10px;
   font-family: var(--font-serif-stack);
-  font-size: 26px;
+  /* Title input doubles as the page header now that ProductFrame's H1
+     is suppressed in editor view. Scaled to match the dashboard H1
+     size so the page reads as "this draft is the page." */
+  font-size: 42px;
   font-weight: 400;
-  letter-spacing: -0.01em;
+  line-height: 1.1;
+  letter-spacing: -0.018em;
   color: var(--text);
   caret-color: var(--stage-interest);
   width: 100%;
@@ -11825,13 +12003,40 @@ html[data-sb="expanded"] .product-frame {
   overflow-x: auto;
 }
 
-/* Small toggle row above the form-mode preview lets the user swap
-   between fast HTML approximation and the real (slower) compiled PDF. */
+/* Toggle row above the preview pane — left holds the HTML/Compiled-PDF
+   pills; right holds the inline compile control + stale hint when the
+   PDF tab is active. Sharing one row keeps the body of both views at
+   the same Y so toggling doesn't shove the resume up or down. */
 .rb-preview-mode-row {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 10px;
+  min-height: 32px;
+}
+
+.rb-preview-mode-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rb-preview-stale-dot {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--text-soft);
+}
+
+/* Crossfade — soft 160ms opacity transition between HTML and PDF
+   panels. The key on the wrapper bumps every previewMode flip so React
+   re-mounts the child, retriggering the animation. */
+@keyframes rb-preview-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.rb-preview-body {
+  animation: rb-preview-fade-in 160ms ease;
 }
 
 /* LaTeX compile preview — swaps in for the HTML preview when the editor
@@ -11866,10 +12071,18 @@ html[data-sb="expanded"] .product-frame {
 .rb-tex-preview-iframe {
   display: block;
   width: 100%;
-  height: 600px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
+  /* Match the HTML preview's page-card aspect ratio (A4 = 794/1123)
+     so the iframe occupies the same viewport size as a single HTML
+     page card. With matching width and aspect, the two preview modes
+     toggle in place without resizing. */
+  aspect-ratio: 794 / 1123;
+  height: auto;
+  border: 0;
+  /* Same paper-card chrome as .rb-page: rounded corners, soft shadow,
+     and a near-white background so HTML↔PDF feels like the same sheet. */
+  border-radius: 6px;
+  background: #fdfdfb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 
 /* Compile-failed display — monospace, fixed max height, scrollable so a
@@ -12147,27 +12360,33 @@ html[data-sb="expanded"] .product-frame {
    the style field. */
 .rb-preview-paper {
   --rb-accent: #1a1a1a;
-  /* "Latin Modern Roman" is what Tectonic ships — the canonical LaTeX
-     serif. We can't ship its full webfont without bloat, but "CMU Serif"
-     web fork + "Latin Modern Roman" fallback cover users who have it
-     installed (TeX users often do). Charter is the next-closest system
-     serif in shape; Georgia is a wider-glyph fallback. */
-  --rb-font-stack: "Latin Modern Roman", "CMU Serif", "Charter", "Iowan Old Style", "Georgia", serif;
+  /* Default web stack — preview.tsx OVERRIDES this inline via
+     --rb-font-stack pulled from the font-registry, so this fallback
+     only kicks in if React hasn't mounted yet. */
+  --rb-font-stack: "Latin Modern Roman", "CMU Serif", "Computer Modern", "Charter", "Iowan Old Style", "Georgia", serif;
   --rb-divider-style: solid;
   --rb-header-align: center;
 
   font-family: var(--rb-font-stack);
-  font-size: 13.5px;
+  /* 11pt LaTeX body → 14.667px at 96dpi. Match it so per-element
+     ratios (Name = 1.57×, Headline = 1.09×, etc.) hit the same on-screen
+     sizes the PDF produces. */
+  font-size: 14.667px;
   line-height: 1.4;
   color: #1a1a1a;
   background: #fdfdfb;
-  /* Only horizontal margins live on the paper — vertical margins are
-     applied per-page card (PAGE_MARGIN_TOP/BOTTOM in preview.tsx) so
-     each rendered page has its own safe zone. The 67px value mirrors
-     the LaTeX template's \usepackage[margin=0.7in]{geometry} — 0.7in
-     × 96dpi ≈ 67.2px — for visual parity with the compiled output. */
+  /* Horizontal padding mirrors the LaTeX template's
+     \usepackage[margin=0.7in]{geometry} — 0.7in × 96dpi ≈ 67.2px. */
   padding: 0 67px;
-  width: 816px; /* matches PAGE_BASE_WIDTH in preview.tsx */
+  width: 794px; /* matches PAGE_BASE_WIDTH in preview.tsx (A4 @ 96dpi) */
+  /* LaTeX justifies body paragraphs by default and hyphenates with
+     microtype. Mirror it on the web so the right margin lines up the
+     same way and the visual rhythm matches the PDF. The hyphens
+     property needs a `lang` attribute to pick the dictionary; the
+     preview wrap inherits `lang="en"` from <html>. */
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
 }
 
 /* Content slice — the tall content tree, clipped by .rb-page-content-area
@@ -12186,18 +12405,27 @@ html[data-sb="expanded"] .product-frame {
   margin-bottom: 18px;
 }
 
+/* Header typography mirrors the LaTeX template at 11pt:
+   \LARGE\bfseries name  → 17.28pt ≈ 1.57× body (21.2px here)
+   \large headline       → 12pt    ≈ 1.09× body (14.7px here)
+   Body inside .rb-preview-paper is 13.5px, so ratios stay in sync. */
 .rb-preview-head h1 {
-  font-family: "Charter", "Iowan Old Style", "Georgia", serif;
-  font-weight: 700;
-  font-size: 30px;
+  /* Inherit --rb-font-stack so the user's font choice (sans/serif)
+     applies to the name too, matching LaTeX where \LARGE doesn't
+     override the document family. */
+  font-family: inherit;
+  /* LaTeX \bfseries pulls the font's actual heavy weight; CSS 700 can
+     under-render for system fonts whose bold sits closer to 600.
+     Nudge to 800 to keep the optical weight equivalent. */
+  font-weight: 800;
+  font-size: 21.2px;
   margin: 0;
-  letter-spacing: -0.01em;
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 .rb-preview-headline {
   margin: 4px 0 0;
-  font-size: 16px;
+  font-size: 14.7px;
   color: #444;
 }
 
@@ -12208,8 +12436,10 @@ html[data-sb="expanded"] .product-frame {
 }
 
 .rb-preview-contact a {
+  /* hyperref's colorlinks=true uses the accent for the link colour and
+     drops the underline. Mirror that here. */
   color: var(--rb-accent);
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .rb-preview-dot {
@@ -12223,16 +12453,18 @@ html[data-sb="expanded"] .product-frame {
 
 .rb-preview-section h2 {
   font-family: var(--rb-font-stack);
-  font-weight: 700;
-  font-size: 17px;
-  letter-spacing: 0.01em;
+  /* See note on h1's font-weight: bump to 800 so the optical weight
+     matches LaTeX's \Large\bfseries section header. */
+  font-weight: 800;
+  /* \Large\bfseries in 11pt = 14.4pt ≈ 1.31× body → 17.7px here. */
+  font-size: 17.7px;
+  letter-spacing: 0;
   text-transform: none;
   margin: 0 0 6px;
   padding-bottom: 3px;
-  /* Border collapses when --rb-divider-style is "none" (border-style:none
-     suppresses the line regardless of width). Accent colour drives the
-     rule when present. */
-  border-bottom-width: 1.5px;
+  /* \titlerule in LaTeX is ~0.4pt (a hair under 1px). Border collapses
+     when --rb-divider-style is "none". */
+  border-bottom-width: 1px;
   border-bottom-style: var(--rb-divider-style);
   border-bottom-color: var(--rb-accent);
 }
@@ -12250,7 +12482,8 @@ html[data-sb="expanded"] .product-frame {
 }
 
 .rb-preview-entry-head strong {
-  font-weight: 700;
+  /* Match LaTeX \textbf{} optical weight on system fonts. */
+  font-weight: 800;
 }
 
 .rb-preview-entry-sub {
@@ -12275,7 +12508,7 @@ html[data-sb="expanded"] .product-frame {
 .rb-preview-link {
   font-size: 12.5px;
   color: var(--rb-accent);
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 /* Body / paragraph default sizing inside the paper. */
@@ -12299,19 +12532,15 @@ html[data-sb="expanded"] .product-frame {
    we'd add a toggle button, but resume editing on a phone is rare enough
    that stacking is sufficient. */
 @media (max-width: 1024px) {
-  .rb-shell {
-    grid-template-columns: 1fr;
-  }
-  .rb-rail {
-    position: static;
-    max-height: none;
-  }
   .rb-editor {
     grid-template-columns: 1fr;
   }
   .rb-editor-preview {
     position: static;
     max-height: none;
+  }
+  .rb-gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
 }
 

@@ -1,7 +1,23 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { EB_Garamond } from "next/font/google";
 import "./globals.css";
 import { StorageSync } from "@/components/storage-sync";
+
+// Resume Builder font(s) — self-hosted via Next.js at build time so the
+// HTML preview can render in the same family the LaTeX compile uses.
+// The CSS variable is consumed by the font-registry's web stack
+// (lib/resume-builder/font-registry.ts).
+const ebGaramond = EB_Garamond({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-eb-garamond",
+  // 400 = body, 500 = subhead, 700 = \bfseries section header,
+  // 800 = name (matches the bumped CSS font-weight in
+  // .rb-preview-head h1).
+  weight: ["400", "500", "700", "800"],
+  style: ["normal", "italic"]
+});
 
 export const metadata: Metadata = {
   title: "Pegasus",
@@ -31,7 +47,12 @@ try {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" data-sb="collapsed" data-theme="dark">
+    <html
+      lang="en"
+      data-sb="collapsed"
+      data-theme="dark"
+      className={ebGaramond.variable}
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: bootScript }} />
       </head>

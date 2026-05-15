@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { LatexCompilePreview } from "@/components/resume-builder/latex-compile-preview";
+import { useEffect, useRef, useState } from "react";
+import {
+  LatexCompilePreview,
+  type PdfPhase
+} from "@/components/resume-builder/latex-compile-preview";
 import { ResumeBuilderPreview } from "@/components/resume-builder/preview";
 import { SectionPersonal } from "@/components/resume-builder/section-personal";
 import { SectionStyle } from "@/components/resume-builder/section-style";
@@ -10,15 +13,16 @@ import { SectionExperiences } from "@/components/resume-builder/section-experien
 import { SectionEducations } from "@/components/resume-builder/section-educations";
 import { SectionSkills } from "@/components/resume-builder/section-skills";
 import { SectionProjects } from "@/components/resume-builder/section-projects";
-import { renderTex } from "@/lib/resume-builder";
+import { renderPdf, renderTex } from "@/lib/resume-builder";
 import {
   defaultTemplateId,
   getTemplate,
   type SectionKey
 } from "@/lib/resume-builder/templates";
-import type {
-  ApiDraftContent,
-  ApiResumeBuilderDraft
+import {
+  ApiError,
+  type ApiDraftContent,
+  type ApiResumeBuilderDraft
 } from "@/lib/api-client";
 
 // ResumeBuilderEditor — host for the section forms + the live preview.
@@ -59,13 +63,83 @@ export function ResumeBuilderEditor({
     setTexLocal(draft.content.customTex ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.id]);
-  // Form-mode users can flip the preview pane between the HTML approximation
-  // and the real compiled PDF. PDF is slower but pixel-true to the export.
-  const [formPreview, setFormPreview] = useState<"html" | "pdf">("html");
+  // Right-pane view selector — HTML approximation vs real LaTeX compile.
+  // Default = "pdf" because the compiled PDF is the actual artifact the
+  // user is exporting; HTML preview is a fast structural approximation
+  // that can't replicate LaTeX's font (Latin Modern Roman), microtype
+  // kerning, or hyperref link colours. Users can still toggle to HTML
+  // for a quick layout sanity check without paying for a compile.
+  const [previewMode, setPreviewMode] = useState<"html" | "pdf">("pdf");
+
+  // Compiled-PDF state lives at the editor (not inside LatexCompilePreview)
+  // so the blob URL survives HTML↔PDF toggles. Auto-compile fires once on
+  // first PDF activation per draft; after that, only the Compile button
+  // triggers a recompile — source edits just flag the PDF as stale.
+  const [pdfPhase, setPdfPhase] = useState<PdfPhase>({ kind: "idle" });
+  const [pdfStale, setPdfStale] = useState(false);
+  const pdfUrlRef = useRef<string | null>(null);
   // Sections the LaTeX→Form parser couldn't auto-detect with confidence.
   // Drives the "Map sections" hint pill below the textarea — the
   // Phase-2 mapping dialog will read from here.
   const [parseUnresolved, setParseUnresolved] = useState<SectionKey[]>([]);
+
+  // Kick off a compile against the persisted draft. Revokes the previous
+  // blob URL so we don't leak object URLs across recompiles.
+  const compilePdf = async () => {
+    setPdfPhase({ kind: "compiling" });
+    setPdfStale(false);
+    try {
+      const blob = await renderPdf(draft.id);
+      const url = URL.createObjectURL(blob);
+      if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current);
+      pdfUrlRef.current = url;
+      setPdfPhase({ kind: "pdf", url });
+    } catch (e) {
+      if (e instanceof ApiError) {
+        setPdfPhase({ kind: "error", status: e.status, message: e.message });
+      } else {
+        setPdfPhase({ kind: "error", status: 0, message: (e as Error).message });
+      }
+    }
+  };
+
+  // Reset compile state when switching to a different draft — the old
+  // draft's blob is meaningless against the new one's source.
+  useEffect(() => {
+    setPdfPhase({ kind: "idle" });
+    setPdfStale(false);
+    if (pdfUrlRef.current) {
+      URL.revokeObjectURL(pdfUrlRef.current);
+      pdfUrlRef.current = null;
+    }
+  }, [draft.id]);
+
+  // First-time auto-compile: the moment the user lands on the PDF tab for
+  // this draft AND we have no compile in-flight or cached, kick one off.
+  // After that, only manual button clicks trigger compiles.
+  useEffect(() => {
+    if (previewMode === "pdf" && pdfPhase.kind === "idle") {
+      void compilePdf();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewMode, pdfPhase.kind]);
+
+  // Mark the compiled PDF stale on any content/source change — purely a
+  // hint to the user; does NOT trigger a recompile.
+  useEffect(() => {
+    if (pdfPhase.kind === "pdf") setPdfStale(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentVersion(draft.content), draft.content.customTex]);
+
+  // Final blob-URL cleanup on unmount.
+  useEffect(() => {
+    return () => {
+      if (pdfUrlRef.current) {
+        URL.revokeObjectURL(pdfUrlRef.current);
+        pdfUrlRef.current = null;
+      }
+    };
+  }, []);
 
   // Form → LaTeX sync: when the user edits any form field in Form mode and
   // there's a stale customTex on the draft (from a previous LaTeX-mode
@@ -170,9 +244,9 @@ export function ResumeBuilderEditor({
   return (
     <div className="rb-editor">
       <div className="rb-editor-form">
-        {/* Title bar — borderless display-font line. Hover/focus reveals an
-            edit affordance + bottom rule, so the input reads as the
-            document's identity, not a generic text field. */}
+        {/* Title bar — borderless display-font line. Doubles as the
+            page header now that ProductFrame's H1 is suppressed in
+            editor view. */}
         <div className="rb-title-row">
           <input
             id="rb-title"
@@ -345,53 +419,66 @@ export function ResumeBuilderEditor({
       </div>
 
       <aside className="rb-editor-preview">
-        {mode === "tex" ? (
-          <LatexCompilePreview
-            draftId={draft.id}
-            sourceVersion={(draft.content.customTex ?? "").length}
-          />
-        ) : (
-          <>
-            <div className="rb-preview-mode-row">
-              <div className="filters">
-                <button
-                  type="button"
-                  className={
-                    formPreview === "html"
-                      ? "filter-box is-active"
-                      : "filter-box"
-                  }
-                  onClick={() => setFormPreview("html")}
-                  title="Instant approximation — close to PDF but not exact"
-                >
-                  HTML preview
-                </button>
-                <button
-                  type="button"
-                  className={
-                    formPreview === "pdf"
-                      ? "filter-box is-active"
-                      : "filter-box"
-                  }
-                  onClick={() => setFormPreview("pdf")}
-                  title="Real LaTeX compile — pixel-true to the export"
-                >
-                  Compiled PDF
-                </button>
-              </div>
-            </div>
-            {formPreview === "html" ? (
-              <ResumeBuilderPreview content={draft.content} />
-            ) : (
-              <LatexCompilePreview
-                draftId={draft.id}
-                // Bump the source version on any content change so the
-                // "Recompile" indicator turns on after edits.
-                sourceVersion={contentVersion(draft.content)}
-              />
-            )}
-          </>
-        )}
+        <div className="rb-preview-mode-row">
+          <div className="filters">
+            <button
+              type="button"
+              className={
+                previewMode === "html"
+                  ? "filter-box is-active"
+                  : "filter-box"
+              }
+              onClick={() => setPreviewMode("html")}
+              title="Instant approximation — close to PDF but not exact"
+            >
+              HTML preview
+            </button>
+            <button
+              type="button"
+              className={
+                previewMode === "pdf"
+                  ? "filter-box is-active"
+                  : "filter-box"
+              }
+              onClick={() => setPreviewMode("pdf")}
+              title="Real LaTeX compile — pixel-true to the export"
+            >
+              Compiled PDF
+            </button>
+          </div>
+          <div className="rb-preview-mode-actions">
+            {previewMode === "html" ? (
+              <span
+                className="rb-preview-stale-dot"
+                title="HTML preview can't fully match LaTeX's font and microtype — use Compiled PDF for the exact export."
+              >
+                Approximate
+              </span>
+            ) : null}
+            {previewMode === "pdf" && pdfStale && pdfPhase.kind === "pdf" ? (
+              <span className="rb-preview-stale-dot">Source changed</span>
+            ) : null}
+            {previewMode === "pdf" ? (
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => void compilePdf()}
+                disabled={pdfPhase.kind === "compiling"}
+              >
+                {pdfPhase.kind === "compiling" ? "Compiling…" : "Compile"}
+              </button>
+            ) : null}
+          </div>
+        </div>
+        {/* Keyed wrapper retriggers the fade-in keyframe on each toggle
+            so the swap reads as a soft crossfade rather than a hard cut. */}
+        <div key={previewMode} className="rb-preview-body">
+          {previewMode === "html" ? (
+            <ResumeBuilderPreview content={draft.content} />
+          ) : (
+            <LatexCompilePreview phase={pdfPhase} />
+          )}
+        </div>
       </aside>
     </div>
   );
