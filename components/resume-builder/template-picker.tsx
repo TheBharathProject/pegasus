@@ -55,8 +55,9 @@ export function TemplatePicker({
               Choose a template
             </h2>
             <p className="muted small rb-picker-sub">
-              Pick a starting point. The form opens prefilled with sample data
-              so you can see how each section looks before editing.
+              Pick a template style — the layout and section spacing applied
+              to whatever data lands in the draft (sample, profile, or an
+              imported resume).
             </p>
           </div>
           <button

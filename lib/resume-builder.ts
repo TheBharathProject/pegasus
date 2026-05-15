@@ -98,3 +98,46 @@ export async function saveToVault(
 ): Promise<ApiFile> {
   return api.post<ApiFile>(`${ROOT}/${id}/save-to-vault`, { slot, label });
 }
+
+// Upload a resume file to R2 via the standard presigned-URL flow used
+// by the Resume AI page. Returns the resulting fileId — feed it into
+// parseResumeForBuilder() (or any other ingest endpoint).
+export async function uploadResumeFile(
+  file: File,
+  label = "Resume Builder import"
+): Promise<{ fileId: string }> {
+  const upload = await api.post<{ uploadUrl: string; file: { id: string } }>(
+    "/job-tracker/resumes/upload-url",
+    {
+      kind: "resume",
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type || "application/pdf",
+      label
+    }
+  );
+  const putRes = await fetch(upload.uploadUrl, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": file.type || "application/pdf" }
+  });
+  if (!putRes.ok) {
+    throw new ApiError(putRes.status, "upload_failed", `R2 upload failed: ${putRes.status}`);
+  }
+  await api.patch(`/job-tracker/resumes/${upload.file.id}/finalize`, {
+    fileSize: file.size
+  });
+  return { fileId: upload.file.id };
+}
+
+// Parse an existing resume (uploaded file or pasted text) into the
+// Resume Builder's structured content shape. The caller then passes
+// {content, title} to createDraft to actually persist a new draft.
+export async function parseResumeForBuilder(
+  input: { fileId: string } | { text: string }
+): Promise<{ content: ApiDraftContent; title: string }> {
+  return api.post<{ content: ApiDraftContent; title: string }>(
+    "/job-tracker/resume-builder/parse",
+    input
+  );
+}

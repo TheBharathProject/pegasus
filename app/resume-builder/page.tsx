@@ -8,6 +8,7 @@ import { DraftsGallery } from "@/components/resume-builder/drafts-gallery";
 import { ResumeBuilderEditor } from "@/components/resume-builder/editor";
 import { ExportModal } from "@/components/resume-builder/export-modal";
 import { TemplatePicker } from "@/components/resume-builder/template-picker";
+import { UploadSourcePicker } from "@/components/resume-builder/upload-source-picker";
 import { isAuthed } from "@/lib/auth";
 import { goTo } from "@/lib/paths";
 import {
@@ -49,6 +50,13 @@ function ResumeBuilderInner() {
   const [error, setError] = useState<string | null>(null);
   const [showExport, setShowExport] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
+  // Stashed (content, title) for the start path that opened the
+  // TemplatePicker. When set, handleTemplateChosen uses it instead of
+  // falling back to sampleDraftContent(). null = the "Start with sample"
+  // path, where the template defines the content too.
+  const [pendingStart, setPendingStart] =
+    useState<{ content: ApiDraftContent; title: string } | null>(null);
   const [scoring, setScoring] = useState(false);
 
   // Score this draft via the Resume AI endpoint (passes draftId, not a
@@ -160,11 +168,25 @@ function ResumeBuilderInner() {
 
   const handleTemplateChosen = (templateId: string) => {
     setShowPicker(false);
-    // We still use the same startNew flow; the templateId arg is
-    // honoured by the existing override block inside startNew (see
-    // its `templateId: defaultTemplateId` line — replaced via a
-    // wrapper below).
+    // If pendingStart is set, the user came from "Use Profile" or
+    // "Upload resume" — their data is already in hand and we just
+    // need the template choice. Otherwise it's the "Start with
+    // sample" path: use the sample content.
+    if (pendingStart) {
+      const { content, title } = pendingStart;
+      setPendingStart(null);
+      void startNewWithTemplate(content, title, templateId);
+      return;
+    }
     void startNewWithTemplate(sampleDraftContent(), "Sample resume", templateId);
+  };
+
+  // Cancelling the TemplatePicker should also drop any stashed start
+  // payload so the next "Start with sample" doesn't accidentally reuse
+  // it.
+  const handlePickerClose = () => {
+    setShowPicker(false);
+    setPendingStart(null);
   };
 
   // startNewWithTemplate is a thin wrapper around startNew that
@@ -199,11 +221,30 @@ function ResumeBuilderInner() {
       const title = content.personal.name
         ? `${content.personal.name}'s resume`
         : "Resume from profile";
-      await startNew(content, title);
+      // Don't create the draft yet — let the user pick a template
+      // first via the existing TemplatePicker, then create with their
+      // profile content + the chosen template.
+      setPendingStart({ content, title });
+      setShowPicker(true);
     } catch (e) {
       setError((e as Error).message);
+    } finally {
       setCreating(false);
     }
+  };
+
+  // UploadSourcePicker has already done the parse — it hands us the
+  // structured content + a best-effort title. We DON'T create the
+  // draft directly; instead we stash the parsed result and open the
+  // TemplatePicker so the user picks a template style for their
+  // imported content (same UX as the "Start with sample" path).
+  const handleUploadParsed = (result: {
+    content: ApiDraftContent;
+    title: string;
+  }) => {
+    setShowUpload(false);
+    setPendingStart(result);
+    setShowPicker(true);
   };
 
   // Autosave: editor calls onChange with the next content/title; we debounce
@@ -392,6 +433,14 @@ function ResumeBuilderInner() {
             <button
               type="button"
               className="ghost-button"
+              onClick={() => setShowUpload(true)}
+              disabled={creating}
+            >
+              Upload existing resume
+            </button>
+            <button
+              type="button"
+              className="ghost-button"
               onClick={handleStartTrulyBlank}
               disabled={creating}
             >
@@ -445,6 +494,8 @@ function ResumeBuilderInner() {
           activeId={draftIdFromUrl}
           onOpen={openDraft}
           onNew={handleStartSample}
+          onUpload={() => setShowUpload(true)}
+          onProfile={() => void handleStartFromProfile()}
           onDelete={(d) =>
             void handleDeleteFromGallery({ id: d.id, title: d.title })
           }
@@ -460,8 +511,14 @@ function ResumeBuilderInner() {
 
       <TemplatePicker
         open={showPicker}
-        onClose={() => setShowPicker(false)}
+        onClose={handlePickerClose}
         onSelect={handleTemplateChosen}
+      />
+
+      <UploadSourcePicker
+        open={showUpload}
+        onClose={() => setShowUpload(false)}
+        onParsed={(result) => void handleUploadParsed(result)}
       />
     </ProductFrame>
   );

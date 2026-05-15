@@ -15,6 +15,8 @@ export function DraftsGallery({
   activeId,
   onOpen,
   onNew,
+  onUpload,
+  onProfile,
   onDelete
 }: {
   drafts: ApiResumeBuilderDraftSummary[];
@@ -23,6 +25,8 @@ export function DraftsGallery({
   activeId?: string | null;
   onOpen: (id: string) => void;
   onNew: () => void;
+  onUpload?: () => void;
+  onProfile?: () => void;
   onDelete: (d: ApiResumeBuilderDraftSummary) => void;
 }) {
   return (
@@ -31,6 +35,28 @@ export function DraftsGallery({
         <span className="rb-gallery-eyebrow">Drafts</span>
         <span className="rb-gallery-count">{drafts.length}</span>
         <span className="rb-gallery-head-spacer" />
+        {onProfile ? (
+          <button
+            type="button"
+            className="rb-gallery-head-new"
+            onClick={onProfile}
+            disabled={creating}
+            style={{ marginRight: 6 }}
+          >
+            Use Profile
+          </button>
+        ) : null}
+        {onUpload ? (
+          <button
+            type="button"
+            className="rb-gallery-head-new"
+            onClick={onUpload}
+            disabled={creating}
+            style={{ marginRight: 6 }}
+          >
+            Upload resume
+          </button>
+        ) : null}
         <button
           type="button"
           className="rb-gallery-head-new"

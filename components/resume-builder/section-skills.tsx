@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { ItemHead } from "@/components/resume-builder/section-experiences";
 import { PlusIcon } from "@/components/icons";
 import type { ApiDraftSkillGroup } from "@/lib/api-client";
@@ -71,18 +72,9 @@ export function SectionSkills({
                 </div>
                 <div className="field" style={{ gridColumn: "1 / -1" }}>
                   <label>Items <span className="muted small">(comma-separated)</span></label>
-                  <input
-                    type="text"
-                    placeholder="Go, TypeScript, Python"
-                    value={group.items.join(", ")}
-                    onChange={(e) =>
-                      update(i, {
-                        items: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter((s) => s.length > 0)
-                      })
-                    }
+                  <SkillItemsField
+                    items={group.items}
+                    onChange={(items) => update(i, { items })}
                   />
                 </div>
               </div>
@@ -91,6 +83,58 @@ export function SectionSkills({
         </div>
       )}
     </section>
+  );
+}
+
+// SkillItemsField is a controlled comma-separated text input over a
+// string[]. Tracks the raw text locally so the user can type commas,
+// trailing spaces, and partial entries without the parent's array-
+// round-trip wiping the input. The parsed array is pushed up on every
+// keystroke; we re-sync from the parent only when the underlying
+// items array changes from an EXTERNAL source (different draft loaded,
+// LaTeX parser rewrote skills, etc.) — never from our own onChange.
+function SkillItemsField({
+  items,
+  onChange
+}: {
+  items: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [raw, setRaw] = useState(() => items.join(", "));
+  // Stable key over array contents so the effect fires on content
+  // changes, not on every parent re-render's new array reference.
+  const itemsKey = items.join("\x00");
+  const ownChangeRef = useRef(false);
+
+  useEffect(() => {
+    // Our own onChange already updated raw above; skip the re-sync so
+    // we don't clobber the user's in-flight typing (e.g. trailing
+    // comma + space).
+    if (ownChangeRef.current) {
+      ownChangeRef.current = false;
+      return;
+    }
+    setRaw(items.join(", "));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemsKey]);
+
+  return (
+    <input
+      type="text"
+      placeholder="Go, TypeScript, Python"
+      value={raw}
+      onChange={(e) => {
+        const next = e.target.value;
+        setRaw(next);
+        ownChangeRef.current = true;
+        onChange(
+          next
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0)
+        );
+      }}
+    />
   );
 }
 
