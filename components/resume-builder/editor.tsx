@@ -24,6 +24,7 @@ import {
   type ApiDraftContent,
   type ApiResumeBuilderDraft
 } from "@/lib/api-client";
+import { track } from "@/lib/analytics";
 
 // ResumeBuilderEditor — host for the section forms + the live preview.
 // Two modes: Form (default; section UIs drive `content`) and LaTeX (raw
@@ -94,6 +95,10 @@ export function ResumeBuilderEditor({
       if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current);
       pdfUrlRef.current = url;
       setPdfPhase({ kind: "pdf", url });
+      track({
+        name: "draft_compiled",
+        params: { draft_id: draft.id, template_id: draft.templateId }
+      });
     } catch (e) {
       if (e instanceof ApiError) {
         setPdfPhase({ kind: "error", status: e.status, message: e.message });

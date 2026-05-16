@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { defaultStyle } from "@/lib/resume-builder-content";
 import {
   FONT_OPTIONS,
@@ -116,12 +117,11 @@ export function SectionStyle({
             // Coerce legacy "serif"/"sans" to the new IDs so the dropdown
             // shows the right item for old drafts.
             value={normalizeFontFamily(v.fontFamily)}
-            onChange={(e) =>
-              set(
-                "fontFamily",
-                e.target.value as NonNullable<ApiDraftStyle["fontFamily"]>
-              )
-            }
+            onChange={(e) => {
+              const id = e.target.value as NonNullable<ApiDraftStyle["fontFamily"]>;
+              set("fontFamily", id);
+              track({ name: "font_changed", params: { font_id: id } });
+            }}
           >
             {FONT_OPTIONS.map((f) => (
               <option key={f.id} value={f.id} style={{ fontFamily: f.webStack }}>

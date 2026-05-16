@@ -25,6 +25,21 @@ type RequestInitWithBody = Omit<RequestInit, "body"> & {
   rawResponse?: boolean;
 };
 
+// emitCreditBlocked fires a single AnalyticsEvent for a 402 response.
+// Dynamic import avoids a hard dependency cycle (lib/analytics.ts has
+// no imports today, but this keeps it strictly tree-shakeable).
+async function emitCreditBlocked(path: string): Promise<void> {
+  try {
+    const { track } = await import("@/lib/analytics");
+    // Strip the leading "/job-tracker/" so the feature label reads
+    // naturally in GA (e.g. "ai/resume/report", "ai/resume/tweaks").
+    const feature = path.replace(/^\/?job-tracker\//, "");
+    track({ name: "ai_credit_blocked", params: { feature } });
+  } catch {
+    // Analytics is best-effort; never block the throw path.
+  }
+}
+
 async function request<T = unknown>(path: string, init: RequestInitWithBody = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (!init.skipAuth) {
@@ -76,6 +91,13 @@ async function request<T = unknown>(path: string, init: RequestInitWithBody = {}
 
   if (!res.ok) {
     const p = payload as { error?: string; message?: string } | null;
+    // Fire-and-forget analytics for credit-blocked AI calls. Identified
+    // by HTTP 402 + the canonical `insufficient_credits` error code the
+    // BE returns from gateAICredit. The `feature` is best-effort from
+    // the request path (e.g. "/job-tracker/ai/resume/report").
+    if (res.status === 402 && p?.error === "insufficient_credits") {
+      void emitCreditBlocked(path);
+    }
     throw new ApiError(res.status, p?.error || "http_error", p?.message || `HTTP ${res.status}`);
   }
 

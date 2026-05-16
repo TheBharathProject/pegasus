@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { track } from "@/lib/analytics";
 import {
   parseResumeForBuilder,
   uploadResumeFile
@@ -70,6 +71,7 @@ export function UploadSourcePicker({
       if (pasteMode) {
         setPhase("parsing");
         const result = await parseResumeForBuilder({ text: pastedText });
+        track({ name: "resume_parsed", params: { source: "text" } });
         setPhase("done");
         onParsed(result);
       } else if (file) {
@@ -77,6 +79,7 @@ export function UploadSourcePicker({
         const { fileId } = await uploadResumeFile(file);
         setPhase("parsing");
         const result = await parseResumeForBuilder({ fileId });
+        track({ name: "resume_parsed", params: { source: "file" } });
         setPhase("done");
         onParsed(result);
       }

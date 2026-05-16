@@ -25,6 +25,7 @@ import {
   type ApiAIReportsResponse,
   type ApiScoreReport
 } from "@/lib/api-client";
+import { track } from "@/lib/analytics";
 import { isAuthed } from "@/lib/auth";
 import { CREDIT_COSTS } from "@/lib/billing";
 import { goTo } from "@/lib/paths";
@@ -178,11 +179,19 @@ function ResumeAiPageInner() {
       const extra = { level, targetRole, jobDescription };
       let r: ApiAIReport;
       if (pasteMode) {
+        track({
+          name: "resume_score_requested",
+          params: { source: "text" }
+        });
         r = await api.post<ApiAIReport>("/job-tracker/ai/resume/report", {
           text: pastedText,
           ...extra
         });
       } else if (file) {
+        track({
+          name: "resume_score_requested",
+          params: { source: "file" }
+        });
         const upload = await api.post<{ uploadUrl: string; file: { id: string } }>(
           "/job-tracker/resumes/upload-url",
           {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ModalShell } from "@/components/ui";
 import { DownloadIcon, FolderIcon } from "@/components/icons";
 import { ApiError } from "@/lib/api-client";
+import { track } from "@/lib/analytics";
 import { renderPdf, renderTex, saveToVault } from "@/lib/resume-builder";
 
 // Export modal — compile the draft via LaTeX, preview the resulting PDF,
@@ -74,6 +75,10 @@ export function ExportModal({
     setSaving(true);
     try {
       const file = await saveToVault(draftId, slot);
+      track({
+        name: "draft_saved_to_vault",
+        params: { draft_id: draftId, slot }
+      });
       setSavedToast(`Saved to Vault slot ${slot} (${file.fileName})`);
     } catch (e) {
       window.alert(`Save failed: ${(e as Error).message}`);
@@ -88,6 +93,7 @@ export function ExportModal({
     a.href = phase.url;
     a.download = "resume.pdf";
     a.click();
+    track({ name: "draft_exported_pdf", params: { draft_id: draftId } });
   };
 
   return (

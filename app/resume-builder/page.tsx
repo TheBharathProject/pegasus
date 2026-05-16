@@ -24,12 +24,15 @@ import {
   sampleDraftContent
 } from "@/lib/resume-builder-content";
 import { defaultTemplateId } from "@/lib/resume-builder/templates";
+import { track } from "@/lib/analytics";
 import {
   api,
   type ApiDraftContent,
   type ApiResumeBuilderDraft,
   type ApiResumeBuilderDraftSummary
 } from "@/lib/api-client";
+
+type StartSource = "sample" | "profile" | "upload" | "blank";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -55,8 +58,11 @@ function ResumeBuilderInner() {
   // TemplatePicker. When set, handleTemplateChosen uses it instead of
   // falling back to sampleDraftContent(). null = the "Start with sample"
   // path, where the template defines the content too.
-  const [pendingStart, setPendingStart] =
-    useState<{ content: ApiDraftContent; title: string } | null>(null);
+  const [pendingStart, setPendingStart] = useState<{
+    content: ApiDraftContent;
+    title: string;
+    source: StartSource;
+  } | null>(null);
   const [scoring, setScoring] = useState(false);
 
   // Score this draft via the Resume AI endpoint (passes draftId, not a
@@ -67,6 +73,7 @@ function ResumeBuilderInner() {
     setScoring(true);
     setError(null);
     try {
+      track({ name: "resume_score_requested", params: { source: "draft" } });
       const r = await api.post<{ id: string }>(
         "/job-tracker/ai/resume/report",
         { draftId: current.id }
@@ -133,7 +140,11 @@ function ResumeBuilderInner() {
     router.push(`/resume-builder?draft=${id}`, { scroll: false });
   };
 
-  const startNew = async (content: ApiDraftContent, title: string) => {
+  const startNew = async (
+    content: ApiDraftContent,
+    title: string,
+    source: StartSource
+  ) => {
     setCreating(true);
     setError(null);
     try {
@@ -146,6 +157,10 @@ function ResumeBuilderInner() {
         content
       });
       setCurrent(created);
+      track({
+        name: "draft_created",
+        params: { source, template_id: defaultTemplateId }
+      });
       router.push(`/resume-builder?draft=${created.id}`, { scroll: false });
       // Refresh the rail so the new draft shows up.
       void reloadDrafts();
@@ -168,17 +183,23 @@ function ResumeBuilderInner() {
 
   const handleTemplateChosen = (templateId: string) => {
     setShowPicker(false);
+    track({ name: "template_changed", params: { template_id: templateId } });
     // If pendingStart is set, the user came from "Use Profile" or
     // "Upload resume" — their data is already in hand and we just
     // need the template choice. Otherwise it's the "Start with
     // sample" path: use the sample content.
     if (pendingStart) {
-      const { content, title } = pendingStart;
+      const { content, title, source } = pendingStart;
       setPendingStart(null);
-      void startNewWithTemplate(content, title, templateId);
+      void startNewWithTemplate(content, title, templateId, source);
       return;
     }
-    void startNewWithTemplate(sampleDraftContent(), "Sample resume", templateId);
+    void startNewWithTemplate(
+      sampleDraftContent(),
+      "Sample resume",
+      templateId,
+      "sample"
+    );
   };
 
   // Cancelling the TemplatePicker should also drop any stashed start
@@ -195,13 +216,18 @@ function ResumeBuilderInner() {
   const startNewWithTemplate = async (
     content: ApiDraftContent,
     title: string,
-    templateId: string
+    templateId: string,
+    source: StartSource
   ) => {
     setCreating(true);
     setError(null);
     try {
       const created = await createDraft({ title, templateId, content });
       setCurrent(created);
+      track({
+        name: "draft_created",
+        params: { source, template_id: templateId }
+      });
       router.push(`/resume-builder?draft=${created.id}`, { scroll: false });
       void reloadDrafts();
     } catch (e) {
@@ -212,7 +238,7 @@ function ResumeBuilderInner() {
   };
 
   const handleStartTrulyBlank = () =>
-    void startNew(emptyDraftContent(), "Untitled resume");
+    void startNew(emptyDraftContent(), "Untitled resume", "blank");
 
   const handleStartFromProfile = async () => {
     setCreating(true);
@@ -224,7 +250,7 @@ function ResumeBuilderInner() {
       // Don't create the draft yet — let the user pick a template
       // first via the existing TemplatePicker, then create with their
       // profile content + the chosen template.
-      setPendingStart({ content, title });
+      setPendingStart({ content, title, source: "profile" });
       setShowPicker(true);
     } catch (e) {
       setError((e as Error).message);
@@ -243,7 +269,7 @@ function ResumeBuilderInner() {
     title: string;
   }) => {
     setShowUpload(false);
-    setPendingStart(result);
+    setPendingStart({ ...result, source: "upload" });
     setShowPicker(true);
   };
 

@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { track } from "@/lib/analytics";
 import { setToken } from "@/lib/auth";
 
 function CallbackInner() {
@@ -40,6 +41,10 @@ function CallbackInner() {
       return;
     }
     setToken(token);
+    // Only Google SSO routes through this callback today (the email
+    // path is unreleased). When that lands we'll need to plumb the
+    // method through the query string.
+    track({ name: "login_succeeded", params: { method: "google" } });
     router.replace("/dashboard");
   }, [params, router]);
 
