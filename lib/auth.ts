@@ -129,6 +129,11 @@ function stateFromCache(): AuthState {
 async function fetchMe(opts?: { force?: boolean }): Promise<AuthUser | null> {
   const now = Date.now();
   if (!opts?.force && cache && now - cache.fetchedAt < TTL_MS) {
+    // Notify on cache hit so a subscriber that mounts AFTER another
+    // useAuth() has already populated the cache still gets flipped out
+    // of its initial loading:true state. Without this, the second
+    // hook's setState is never called and it stays stuck.
+    notify(stateFromCache());
     return cache.user;
   }
   if (inflight) return inflight;
